@@ -1,0 +1,26 @@
+{
+  "name": "diurnoct",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "diurnoct — a realtime day & night map of Earth, built as a customizable wallpaper.",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "prepare": "svelte-kit sync || echo 'svelte-kit sync skipped'",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "fetch-textures": "bun run scripts/fetch-textures.ts"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.8",
+    "@sveltejs/kit": "^2.22.0",
+    "@sveltejs/vite-plugin-svelte": "^5.1.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "svelte": "^5.36.0",
+    "svelte-check": "^4.2.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.3.0"
+  }
+}
