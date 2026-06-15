@@ -18,10 +18,10 @@ import { dirname } from 'node:path';
 // jsDelivr). Override with DAY_URL / NIGHT_URL for e.g. 8K NASA imagery.
 const DAY_URL =
 	process.env.DAY_URL ??
-	'https://cdn.jsdelivr.net/gh/turban/webgl-earth@master/images/2_no_clouds_4k.jpg';
+	'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/may/world.topo.bathy.200405.3x5400x2700.jpg';
 const NIGHT_URL =
 	process.env.NIGHT_URL ??
-	'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r168/examples/textures/planets/earth_lights_2048.png';
+	'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_01deg.jpg';
 
 const targets = [
 	{ name: 'day', url: DAY_URL, out: 'static/textures/day.jpg' },
