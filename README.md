@@ -127,6 +127,12 @@ Point `fetch-textures` at 8K NASA imagery for an even sharper wallpaper. Solar
 and lunar positions use the standard low-precision formulae from Meeus,
 _Astronomical Algorithms_.
 
+## Similar projects
+
+* [openhamclock](https://github.com/accius/openhamclock) – A real-time dashboard derived from HamClock, often described as a “poor man’s Geochron.”
+* [geo-clock-card](https://github.com/jpettitt/geo-clock-card) – A Geochron-style clock designed for use in Home Assistant.
+* [day-night-map](https://github.com/lanrat/day-night-map) – A similar project that inspired making this project simple enough to be deployable on GitHub Pages.
+
 ## License
 
 MIT.
