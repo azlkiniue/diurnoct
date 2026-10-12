@@ -10,6 +10,13 @@ import { browser } from '$app/environment';
 import type { FitMode } from '$lib/map/projection';
 import type { TextureSettings } from '$lib/config';
 import type { TimeSettings } from '$lib/time';
+import {
+	HIGH_LAT_RULES,
+	METHODS,
+	type AsrSchool,
+	type HighLatRule,
+	type MethodId
+} from '$lib/astro/prayer';
 
 const STORAGE_KEY = 'diurnoct:settings:v1';
 
@@ -48,6 +55,33 @@ export interface UISettings {
 	hudScale: number;
 }
 
+/** A place whose timetable the prayer view shows. */
+export interface PrayerPlace {
+	lat: number;
+	lon: number;
+	/** City name, "Your location", or empty for a point picked on the map. */
+	name: string;
+	/** IANA time zone, when known; otherwise times show in the viewer's. */
+	tz?: string;
+	/** Only approximately here: the city of the device's time zone. */
+	approx?: boolean;
+}
+
+export interface PrayerSettings {
+	/** Offer the prayer-times view (toolbar switch, P). Off until turned on in settings. */
+	enabled: boolean;
+	method: MethodId;
+	asr: AsrSchool;
+	highLat: HighLatRule;
+	/** Prayer names along the lines. */
+	labels: boolean;
+	legend: boolean;
+	/** The pinned place's timetable panel. */
+	timetable: boolean;
+	/** Unset until the viewer picks one — meanwhile, their time zone's city; null once cleared. */
+	place?: PrayerPlace | null;
+}
+
 export interface Settings {
 	verbosity: Verbosity;
 	layers: Layers;
@@ -55,6 +89,7 @@ export interface Settings {
 	time: TimeSettings;
 	texture: TextureSettings;
 	ui: UISettings;
+	prayer: PrayerSettings;
 }
 
 export const LAYER_META: { key: LayerKey; label: string; hint: string }[] = [
@@ -138,7 +173,16 @@ function defaults(): Settings {
 		},
 		time: { mode: 'live', customISO: '' },
 		texture: { source: 'auto', customDay: '', customNight: '' },
-		ui: { autoHide: true, hudScale: 1 }
+		ui: { autoHide: true, hudScale: 1 },
+		prayer: {
+			enabled: false,
+			method: 'mwl',
+			asr: 'standard',
+			highLat: 'mwl45',
+			labels: true,
+			legend: true,
+			timetable: true
+		}
 	};
 }
 
@@ -152,8 +196,17 @@ function merge(base: Settings, saved: unknown): Settings {
 		map: { ...base.map, ...(s.map as Partial<MapSettings>) },
 		time: { ...base.time, ...(s.time as Partial<TimeSettings>) },
 		texture: { ...base.texture, ...(s.texture as Partial<TextureSettings>) },
-		ui: { ...base.ui, ...(s.ui as Partial<UISettings>) }
+		ui: { ...base.ui, ...(s.ui as Partial<UISettings>) },
+		prayer: mergePrayer(base.prayer, s.prayer)
 	};
+}
+
+function mergePrayer(base: PrayerSettings, saved: unknown): PrayerSettings {
+	const p = { ...base, ...(saved as Partial<PrayerSettings>) };
+	// Drop ids a newer or older version doesn't know.
+	if (!METHODS.some((m) => m.id === p.method)) p.method = base.method;
+	if (!HIGH_LAT_RULES.some((r) => r.id === p.highLat)) p.highLat = base.highLat;
+	return p;
 }
 
 function load(): Settings {
@@ -215,6 +268,10 @@ class SettingsStore {
 
 	setUI<K extends keyof UISettings>(key: K, value: UISettings[K]) {
 		this.current.ui[key] = value;
+	}
+
+	setPrayer<K extends keyof PrayerSettings>(key: K, value: PrayerSettings[K]) {
+		this.current.prayer[key] = value;
 	}
 
 	reset() {

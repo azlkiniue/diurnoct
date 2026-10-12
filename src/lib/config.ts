@@ -3,6 +3,7 @@
 export const APP_NAME = 'diurnoct';
 export const APP_TAGLINE = 'diurnal + nocturnal, yet another geochron-alike app';
 export const REPO_URL = 'https://github.com/azlkiniue/diurnoct';
+export const PRAYER_DOCS_URL = `${REPO_URL}/blob/main/docs/prayer-times.md`;
 
 /**
  * Default satellite textures.

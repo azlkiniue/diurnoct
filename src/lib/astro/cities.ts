@@ -35,6 +35,9 @@ export const CITIES: City[] = [
 	{ name: 'Anchorage', lat: 61.22, lon: -149.9, tz: 'America/Anchorage' }
 ];
 
+/** The Kaaba, which every prayer faces; marked on the prayer-times map. */
+export const MAKKAH: City = { name: 'Makkah', lat: 21.4225, lon: 39.8262, tz: 'Asia/Riyadh' };
+
 /** Cities shown as extra clocks when the "city clocks" layer is on. */
 const CLOCK_CITY_NAMES = [
 	'San Francisco',

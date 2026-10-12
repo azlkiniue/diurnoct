@@ -19,6 +19,18 @@
 	--font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
 }
 
+/* Prayer-time lines, in the order they sweep round the globe; neighbours stay
+   >= 17 dE apart under protan/deutan simulation (OKLab x100). `static` keeps
+   them in the output: components pick them by name, as var(--color-<prayer>). */
+@theme static {
+	--color-fajr: #67e8f9;
+	--color-sunrise: #10b981;
+	--color-dhuhr: #fde047;
+	--color-asr: #3b82f6;
+	--color-maghrib: #f0abfc;
+	--color-isha: #fb923c;
+}
+
 /* ----------------------------------------------------------------------------
    Base
    ------------------------------------------------------------------------- */

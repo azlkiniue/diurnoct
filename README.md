@@ -15,6 +15,13 @@ information can be toggled on or off to taste.
 - 🕗 **Astronomically accurate** — the sun's subsolar point, the moon's
   sub-lunar point and phase, and per-city day/night are computed live and
   updated every second.
+- 🕌 **Prayer times map** _(optional)_ — turn it on in **Settings → Prayer
+  times** for a second view (`/prayer/`, or press `P`) of where Fajr, sunrise,
+  Dhuhr, Asr, Maghrib and Isha are beginning right now, with 15 calculation
+  methods, both Asr schools, and the high-latitude rules of the Muslim World
+  League's Fiqh Council and other scholars. Pin a place for its timetable.
+  Methodology, sources and accuracy checks are in
+  [`docs/prayer-times.md`](docs/prayer-times.md).
 - 🎚️ **Adjustable verbosity** — three presets (Minimal / Standard / Detailed)
   plus individual toggles for clocks, date, sun & moon markers, the terminator
   line, a graticule, city dots & labels, cursor coordinates and a legend.
@@ -66,10 +73,14 @@ DAY_URL="https://…/blue_marble_8k.jpg" NIGHT_URL="https://…/black_marble_8k.
 | --------- | ----------------------------------- |
 | `H`       | Hide / show all overlays (pure map) |
 | `F`       | Toggle fullscreen                   |
+| `P`       | Switch day & night / prayer times ¹ |
 | `S` / `,` | Open settings                       |
 | `Esc`     | Close settings                      |
 
+¹ Once prayer times are turned on in settings.
+
 The toolbar (top center) exposes the same actions and auto-hides when idle.
+On the prayer-times view, click the map to pin a place for its timetable.
 
 ## Build
 
@@ -113,6 +124,11 @@ Served from the root, so no `BASE_PATH` is needed.
   [`src/lib/stores/settings.svelte.ts`](src/lib/stores/settings.svelte.ts).
 - **The terminator shader** is in
   [`src/lib/map/shaders.ts`](src/lib/map/shaders.ts).
+- **Prayer times** — methods and high-latitude rules — are in
+  [`src/lib/astro/prayer.ts`](src/lib/astro/prayer.ts). After changing them,
+  run `bun run verify-prayer-times` to check them against the
+  [adhan](https://github.com/batoulapps/adhan-js) library and an independent
+  solution of the Asr shadow condition.
 
 ## Credits
 

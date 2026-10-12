@@ -1,15 +1,52 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
+
 	interface Props {
 		uiHidden: boolean;
 		isFullscreen: boolean;
+		/** Which view is showing: prayer times, or day & night. */
+		prayerView: boolean;
+		/** The prayer-times view is switched on in settings, so offer the view switch. */
+		prayerEnabled: boolean;
 		onToggleHide: () => void;
 		onToggleFullscreen: () => void;
 		onSettings: () => void;
 	}
-	let { uiHidden, isFullscreen, onToggleHide, onToggleFullscreen, onSettings }: Props = $props();
+	let {
+		uiHidden,
+		isFullscreen,
+		prayerView,
+		prayerEnabled,
+		onToggleHide,
+		onToggleFullscreen,
+		onSettings
+	}: Props = $props();
 </script>
 
 <div class="pointer-events-auto absolute top-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full panel px-1.5 py-1.5 shadow-xl">
+	{#if prayerEnabled}
+		<nav class="flex items-center gap-0.5 rounded-full bg-white/5 p-0.5" aria-label="Views">
+			<a href={resolve('/')} class="view" class:on={!prayerView} aria-current={prayerView ? undefined : 'page'} title="Day & night (P)">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<circle cx="12" cy="12" r="9" />
+					<path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" />
+				</svg>
+				<span class="hidden sm:inline">Day &amp; night</span>
+			</a>
+			<a href={resolve('/prayer/')} class="view" class:on={prayerView} aria-current={prayerView ? 'page' : undefined} title="Prayer times (P)">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<path d="M12 3v3" />
+					<path d="M6 13a6 6 0 0 1 12 0" />
+					<path d="M4 21v-8h16v8Z" />
+					<path d="M10 21v-3a2 2 0 0 1 4 0v3" />
+				</svg>
+				<span class="hidden sm:inline">Prayer times</span>
+			</a>
+		</nav>
+
+		<span class="mx-0.5 h-5 w-px bg-white/10" aria-hidden="true"></span>
+	{/if}
+
 	<button type="button" class="tb" aria-label={uiHidden ? 'Show overlays' : 'Hide overlays'} title="Hide / show overlays (H)" onclick={onToggleHide}>
 		{#if uiHidden}
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -57,5 +94,25 @@
 	.tb:hover {
 		color: var(--color-ink);
 		background: color-mix(in oklab, white 10%, transparent);
+	}
+	.view {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		height: 1.85rem;
+		padding: 0 0.55rem;
+		border-radius: 9999px;
+		font-size: 0.75rem;
+		font-weight: 500;
+		white-space: nowrap;
+		color: var(--color-ink-dim);
+		transition: all 0.15s ease;
+	}
+	.view:hover {
+		color: var(--color-ink);
+	}
+	.view.on {
+		background: var(--color-day);
+		color: var(--color-space);
 	}
 </style>

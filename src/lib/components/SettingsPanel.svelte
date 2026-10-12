@@ -1,16 +1,46 @@
 <script lang="ts">
-	import { REPO_URL } from '$lib/config';
+	import { PRAYER_DOCS_URL, REPO_URL } from '$lib/config';
 	import { settings, LAYER_META, type Verbosity, type LayerKey } from '$lib/stores/settings.svelte';
+	import {
+		HIGH_LAT_RULES,
+		METHODS,
+		methodById,
+		type AsrSchool,
+		type HighLatRule,
+		type MethodId
+	} from '$lib/astro/prayer';
 	import type { FitMode } from '$lib/map/projection';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
 		open: boolean;
+		/** Showing the prayer-times view: adds its section, drops day & night-only layers. */
+		prayerView: boolean;
 		onclose: () => void;
 	}
-	let { open, onclose }: Props = $props();
+	let { open, prayerView, onclose }: Props = $props();
 
 	const s = settings; // `s.current` is reactive
+
+	const method = $derived(methodById(s.current.prayer.method));
+	const methodSummary = $derived(
+		[
+			`Fajr ${method.fajr}°`,
+			'angle' in method.isha ? `Isha ${method.isha.angle}°` : `Isha +${method.isha.minutes} min`,
+			method.maghrib !== undefined ? `Maghrib ${method.maghrib}°` : '',
+			method.region
+		]
+			.filter(Boolean)
+			.join(' · ')
+	);
+	const rule = $derived(
+		HIGH_LAT_RULES.find((r) => r.id === s.current.prayer.highLat) ?? HIGH_LAT_RULES[0]
+	);
+	const layerMeta = $derived(
+		prayerView
+			? LAYER_META.filter((l) => l.key !== 'terminatorLine' && l.key !== 'legend')
+			: LAYER_META
+	);
 
 	function pad(n: number) {
 		return String(n).padStart(2, '0');
@@ -159,6 +189,121 @@
 		</button>
 	</header>
 
+	{#snippet prayerBody()}
+		<div class="space-y-4">
+			<div class="-mx-2">
+				{@render toggleRow(
+					'Show prayer times',
+					'A live map of the daily prayer times',
+					s.current.prayer.enabled,
+					() => s.setPrayer('enabled', !s.current.prayer.enabled)
+				)}
+			</div>
+
+			{#if s.current.prayer.enabled && prayerView}
+				<div>
+					<label for="prayer-method" class="mb-1.5 block text-xs text-[var(--color-ink-dim)]">
+						Calculation method
+					</label>
+					<select
+						id="prayer-method"
+						aria-describedby="prayer-method-info"
+						class="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-sm text-[var(--color-ink)] [color-scheme:dark]"
+						value={s.current.prayer.method}
+						onchange={(e) => s.setPrayer('method', e.currentTarget.value as MethodId)}
+					>
+						{#each METHODS as m (m.id)}
+							<option value={m.id}>{m.name}</option>
+						{/each}
+					</select>
+					<p id="prayer-method-info" class="mt-1.5 text-xs text-[var(--color-ink-dim)]">
+						{methodSummary}
+					</p>
+				</div>
+
+				<div>
+					<div class="mb-1.5 text-xs text-[var(--color-ink-dim)]">Asr</div>
+					{@render seg(
+						[
+							{ k: 'standard', l: 'Standard' },
+							{ k: 'hanafi', l: 'Hanafi' }
+						],
+						s.current.prayer.asr,
+						(k) => s.setPrayer('asr', k as AsrSchool)
+					)}
+					<p class="mt-1.5 text-xs text-[var(--color-ink-dim)]">
+						{s.current.prayer.asr === 'hanafi'
+							? 'Shadow longer than at noon by twice the height.'
+							: 'Shafiʿi, Maliki, Hanbali: shadow longer than at noon by the height.'}
+					</p>
+				</div>
+
+				<div>
+					<label for="prayer-highlat" class="mb-1.5 block text-xs text-[var(--color-ink-dim)]">
+						High latitudes
+					</label>
+					<select
+						id="prayer-highlat"
+						aria-describedby="prayer-highlat-info"
+						class="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-sm text-[var(--color-ink)] [color-scheme:dark]"
+						value={s.current.prayer.highLat}
+						onchange={(e) => s.setPrayer('highLat', e.currentTarget.value as HighLatRule)}
+					>
+						{#each HIGH_LAT_RULES as r (r.id)}
+							<option value={r.id}>{r.label}</option>
+						{/each}
+					</select>
+					<div id="prayer-highlat-info" class="mt-1.5 space-y-1.5 text-xs text-[var(--color-ink-dim)]">
+						<p>{rule.summary}</p>
+						{#if rule.id !== 'none'}
+							<p>Where the sun doesn’t rise or set at all, every time follows latitude 45°.</p>
+						{/if}
+						{#if rule.source}
+							<p class="text-[11px] italic opacity-80">{rule.source}</p>
+						{/if}
+					</div>
+				</div>
+
+				<div class="-mx-2">
+					{@render toggleRow(
+						'Line labels',
+						'Prayer names along the lines',
+						s.current.prayer.labels,
+						() => s.setPrayer('labels', !s.current.prayer.labels)
+					)}
+					{@render toggleRow(
+						'Legend',
+						'Colors, definitions and line styles',
+						s.current.prayer.legend,
+						() => s.setPrayer('legend', !s.current.prayer.legend)
+					)}
+					{@render toggleRow(
+						'Timetable',
+						'Times for a place you pick on the map',
+						s.current.prayer.timetable,
+						() => s.setPrayer('timetable', !s.current.prayer.timetable)
+					)}
+				</div>
+
+				<a
+					href={PRAYER_DOCS_URL}
+					target="_blank"
+					rel="noreferrer"
+					class="block text-xs text-[var(--color-ink-dim)] underline-offset-2 hover:text-[var(--color-ink)] hover:underline"
+				>
+					How these times are calculated, with sources ↗
+				</a>
+			{:else if s.current.prayer.enabled}
+				<p class="text-xs text-[var(--color-ink-dim)]">
+					Open it from the toolbar, or press <kbd class="kbd">P</kbd>; its settings are there.
+				</p>
+			{/if}
+		</div>
+	{/snippet}
+	{#if prayerView}
+		{@render section('Prayer times', prayerBody)}
+	{/if}
+
 	{#snippet verbosityBody()}
 		{@render seg(
 			[
@@ -177,7 +322,7 @@
 
 	{#snippet layersBody()}
 		<div class="-mx-2">
-			{#each LAYER_META as l (l.key)}
+			{#each layerMeta as l (l.key)}
 				{@render toggleRow(l.label, l.hint, s.current.layers[l.key], () =>
 					s.toggleLayer(l.key as LayerKey)
 				)}
@@ -352,6 +497,10 @@
 	{/snippet}
 	{@render section('Satellite textures', texBody)}
 
+	{#if !prayerView}
+		{@render section('Prayer times', prayerBody)}
+	{/if}
+
 	{#snippet footerBody()}
 		<div class="space-y-3">
 			<button
@@ -365,6 +514,9 @@
 					<span><kbd class="kbd">H</kbd> hide UI</span>
 					<span><kbd class="kbd">F</kbd> fullscreen</span>
 					<span><kbd class="kbd">S</kbd> settings</span>
+					{#if s.current.prayer.enabled}
+						<span><kbd class="kbd">P</kbd> prayer times</span>
+					{/if}
 					<span><kbd class="kbd">Esc</kbd> close</span>
 				</div>
 			</div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { APP_NAME, APP_TAGLINE } from '$lib/config';
 	import Logo from './Logo.svelte';
 	import type { GeoPoint } from '$lib/astro/solar';
@@ -23,9 +24,26 @@
 		cursor: GeoPoint | null;
 		scale: number;
 		customTime: boolean;
+		tagline?: string;
+		/** Replaces the day & night legend (bottom-left). */
+		legend?: Snippet;
+		/** Replaces the sun & moon readout (bottom-right). */
+		aside?: Snippet;
 	}
 
-	let { layers, time, sun, moon, phase, cursor, scale, customTime }: Props = $props();
+	let {
+		layers,
+		time,
+		sun,
+		moon,
+		phase,
+		cursor,
+		scale,
+		customTime,
+		tagline = APP_TAGLINE,
+		legend,
+		aside
+	}: Props = $props();
 
 	const tz = localTimeZone();
 	const localLabel = $derived(`${tz.split('/').pop()?.replace('_', ' ') ?? tz} · ${tzAbbrev(time)}`);
@@ -34,14 +52,14 @@
 <!-- Title — top-left -->
 {#if layers.title}
 	<div
-		class="absolute top-0 left-0 p-5 sm:p-7"
+		class="absolute top-0 left-0 max-w-[55vw] p-5 sm:max-w-none sm:p-7"
 		style={`transform: scale(${scale}); transform-origin: top left;`}
 	>
 		<div class="flex items-center gap-2.5">
 			<Logo size={22} class="shrink-0" />
 			<h1 class="text-xl font-semibold tracking-tight lowercase sm:text-2xl">{APP_NAME}</h1>
 		</div>
-		<p class="text-ink-dim mt-1 text-xs sm:text-sm">{APP_TAGLINE}</p>
+		<p class="text-ink-dim mt-1 text-xs sm:text-sm">{tagline}</p>
 	</div>
 {/if}
 
@@ -90,7 +108,15 @@
 {/if}
 
 <!-- Sun & moon — bottom-right -->
-{#if layers.subsolar || layers.sublunar}
+{#if aside}
+	<div
+		class="absolute right-0 bottom-0 p-5 sm:p-7"
+		class:pb-20={layers.cityClocks}
+		style={`transform: scale(${scale}); transform-origin: bottom right;`}
+	>
+		{@render aside()}
+	</div>
+{:else if layers.subsolar || layers.sublunar}
 	<div
 		class="absolute right-0 bottom-0 p-5 text-right sm:p-7"
 		class:pb-20={layers.cityClocks}
@@ -124,7 +150,7 @@
 {/if}
 
 <!-- Legend & cursor coordinates — bottom-left -->
-{#if layers.legend || (layers.coordinates && cursor)}
+{#if legend || layers.legend || (layers.coordinates && cursor)}
 	<div
 		class="absolute bottom-0 left-0 p-5 sm:p-7"
 		class:pb-20={layers.cityClocks}
@@ -133,7 +159,9 @@
 		{#if layers.coordinates && cursor}
 			<div class="tnum text-ink-dim mb-2 text-xs">{formatLatLon(cursor, 2)}</div>
 		{/if}
-		{#if layers.legend}
+		{#if legend}
+			{@render legend()}
+		{:else if layers.legend}
 			<div class="text-ink-dim flex flex-col gap-1.5 text-xs">
 				<div class="flex items-center gap-2">
 					<span class="h-2 w-4 rounded-sm bg-[var(--color-day)]"></span> Daylight
