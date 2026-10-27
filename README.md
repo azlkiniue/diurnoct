@@ -129,6 +129,11 @@ Served from the root, so no `BASE_PATH` is needed.
   run `bun run verify-prayer-times` to check them against the
   [adhan](https://github.com/batoulapps/adhan-js) library and an independent
   solution of the Asr shadow condition.
+- **The moon's position** is in
+  [`src/lib/astro/lunar.ts`](src/lib/astro/lunar.ts). After changing it, run
+  `bun run verify-moon` to check it against
+  [astronomy-engine](https://github.com/cosinekitty/astronomy) and Meeus'
+  worked example; methodology in [`docs/moon.md`](docs/moon.md).
 
 ## Credits
 
