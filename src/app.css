@@ -31,6 +31,14 @@
 	--color-isha: #fb923c;
 }
 
+/* Moon-view lines, picked the same way: >= 17 dE apart under protan, deutan
+   and tritan simulation. Components use var(--color-<event>). */
+@theme static {
+	--color-moonrise: #38bdf8;
+	--color-transit: #f1f5f9;
+	--color-moonset: #fb7185;
+}
+
 /* ----------------------------------------------------------------------------
    Base
    ------------------------------------------------------------------------- */

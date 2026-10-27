@@ -80,6 +80,11 @@ export interface PrayerSettings {
 	timetable: boolean;
 }
 
+export interface MoonSettings {
+	/** Offer the Moon view (toolbar switch, M). Off until turned on in settings. */
+	enabled: boolean;
+}
+
 /** Where versions before the shared pinned place kept it. */
 interface LegacyPrayerSettings extends Partial<PrayerSettings> {
 	place?: unknown;
@@ -93,6 +98,7 @@ export interface Settings {
 	texture: TextureSettings;
 	ui: UISettings;
 	prayer: PrayerSettings;
+	moon: MoonSettings;
 	/**
 	 * The pinned place, shared by every view that shows times for one. Unset
 	 * until the viewer picks one — meanwhile, their time zone's city; null once
@@ -191,6 +197,9 @@ function defaults(): Settings {
 			labels: true,
 			legend: true,
 			timetable: true
+		},
+		moon: {
+			enabled: false
 		}
 	};
 }
@@ -207,6 +216,7 @@ function merge(base: Settings, saved: unknown): Settings {
 		texture: { ...base.texture, ...(s.texture as Partial<TextureSettings>) },
 		ui: { ...base.ui, ...(s.ui as Partial<UISettings>) },
 		prayer: mergePrayer(base.prayer, s.prayer),
+		moon: { ...base.moon, ...(s.moon as Partial<MoonSettings>) },
 		place: mergePlace(s)
 	};
 }
@@ -292,6 +302,10 @@ class SettingsStore {
 
 	setPrayer<K extends keyof PrayerSettings>(key: K, value: PrayerSettings[K]) {
 		this.current.prayer[key] = value;
+	}
+
+	setMoon<K extends keyof MoonSettings>(key: K, value: MoonSettings[K]) {
+		this.current.moon[key] = value;
 	}
 
 	setPlace(place: Place | null | undefined) {

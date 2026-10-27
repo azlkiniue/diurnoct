@@ -22,6 +22,10 @@ information can be toggled on or off to taste.
   League's Fiqh Council and other scholars. Pin a place for its timetable.
   Methodology, sources and accuracy checks are in
   [`docs/prayer-times.md`](docs/prayer-times.md).
+- 🌙 **Moon view** _(optional)_ — turn it on in **Settings → Moon** for a
+  view (`/moon/`, or press `M`) of where the moon is rising, highest in the
+  sky and setting right now, from the full Meeus lunar series. Methodology,
+  sources and accuracy checks are in [`docs/moon.md`](docs/moon.md).
 - 🎚️ **Adjustable verbosity** — three presets (Minimal / Standard / Detailed)
   plus individual toggles for clocks, date, sun & moon markers, the terminator
   line, a graticule, city dots & labels, cursor coordinates and a legend.
@@ -74,10 +78,11 @@ DAY_URL="https://…/blue_marble_8k.jpg" NIGHT_URL="https://…/black_marble_8k.
 | `H`       | Hide / show all overlays (pure map) |
 | `F`       | Toggle fullscreen                   |
 | `P`       | Switch day & night / prayer times ¹ |
+| `M`       | Switch day & night / Moon ¹         |
 | `S` / `,` | Open settings                       |
 | `Esc`     | Close settings                      |
 
-¹ Once prayer times are turned on in settings.
+¹ Once that view is turned on in settings.
 
 The toolbar (top center) exposes the same actions and auto-hides when idle.
 On the prayer-times view, click the map to pin a place for its timetable.
@@ -130,8 +135,9 @@ Served from the root, so no `BASE_PATH` is needed.
   [adhan](https://github.com/batoulapps/adhan-js) library and an independent
   solution of the Asr shadow condition.
 - **The moon's position** is in
-  [`src/lib/astro/lunar.ts`](src/lib/astro/lunar.ts). After changing it, run
-  `bun run verify-moon` to check it against
+  [`src/lib/astro/lunar.ts`](src/lib/astro/lunar.ts), and the Moon view's
+  lines in [`src/lib/astro/moon.ts`](src/lib/astro/moon.ts). After changing
+  them, run `bun run verify-moon` to check them against
   [astronomy-engine](https://github.com/cosinekitty/astronomy) and Meeus'
   worked example; methodology in [`docs/moon.md`](docs/moon.md).
 

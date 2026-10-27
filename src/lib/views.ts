@@ -8,7 +8,7 @@
 import type { Pathname, RouteId } from '$app/types';
 import type { Layers, Settings } from '$lib/stores/settings.svelte';
 
-export type ViewId = 'day' | 'prayer';
+export type ViewId = 'day' | 'prayer' | 'moon';
 
 export interface View {
 	id: ViewId;
@@ -42,6 +42,16 @@ export const VIEWS: View[] = [
 		enabled: (s) => s.prayer.enabled,
 		// The prayer lines stand in for the terminator, and bring their own legend.
 		layers: { terminatorLine: false, legend: false }
+	},
+	{
+		id: 'moon',
+		label: 'Moon',
+		route: '/moon',
+		path: '/moon/',
+		key: 'm',
+		enabled: (s) => s.moon.enabled,
+		// The lines circle the point under the moon, so it's always marked.
+		layers: { sublunar: true, legend: false }
 	}
 ];
 

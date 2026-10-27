@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PRAYER_DOCS_URL, REPO_URL } from '$lib/config';
+	import { MOON_DOCS_URL, PRAYER_DOCS_URL, REPO_URL } from '$lib/config';
 	import { settings, LAYER_META, type Verbosity, type LayerKey } from '$lib/stores/settings.svelte';
 	import {
 		HIGH_LAT_RULES,
@@ -298,10 +298,40 @@
 		</div>
 	{/snippet}
 
+	{#snippet moonBody()}
+		<div class="space-y-4">
+			<div class="-mx-2">
+				{@render toggleRow(
+					'Show the Moon view',
+					'Where the moon is rising, highest and setting',
+					s.current.moon.enabled,
+					() => s.setMoon('enabled', !s.current.moon.enabled)
+				)}
+			</div>
+
+			{#if s.current.moon.enabled && view === 'moon'}
+				<a
+					href={MOON_DOCS_URL}
+					target="_blank"
+					rel="noreferrer"
+					class="block text-xs text-[var(--color-ink-dim)] underline-offset-2 hover:text-[var(--color-ink)] hover:underline"
+				>
+					How the lines are calculated, with sources ↗
+				</a>
+			{:else if s.current.moon.enabled}
+				<p class="text-xs text-[var(--color-ink-dim)]">
+					Open it from the toolbar, or press <kbd class="kbd">M</kbd>; its settings are there.
+				</p>
+			{/if}
+		</div>
+	{/snippet}
+
 	<!-- Each optional view's section: the showing view's first, the others at the end. -->
 	{#snippet viewSection(id: ViewId)}
 		{#if id === 'prayer'}
 			{@render section('Prayer times', prayerBody)}
+		{:else if id === 'moon'}
+			{@render section('Moon', moonBody)}
 		{/if}
 	{/snippet}
 	{@render viewSection(view)}

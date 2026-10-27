@@ -50,6 +50,8 @@
 							<path d="M6 13a6 6 0 0 1 12 0" />
 							<path d="M4 21v-8h16v8Z" />
 							<path d="M10 21v-3a2 2 0 0 1 4 0v3" />
+						{:else if v.id === 'moon'}
+							<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" />
 						{/if}
 					</svg>
 					<span class="hidden sm:inline">{v.label}</span>

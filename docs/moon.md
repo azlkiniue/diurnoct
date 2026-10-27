@@ -1,10 +1,26 @@
 # Moon — methodology & sources
 
-How diurnoct works out where the moon is. Today this places the moon marker
-and its phase on the Day & night view; the planned **Moon** view will draw
-where the moon is rising, highest and setting from the same position.
+How diurnoct works out where the moon is, and where on Earth it is rising,
+highest and setting. The same position places the moon marker and its phase
+on the Day & night view.
 
-The code is in [`src/lib/astro/lunar.ts`](../src/lib/astro/lunar.ts).
+The **Moon** view (`/moon/`, or press `M`) draws, live, three lines on the
+map:
+
+| Line | Places where the moon is … |
+| ---- | --------------------------- |
+| moonrise | rising right now |
+| moon transit | at its highest right now, crossing the meridian |
+| moonset | setting right now |
+
+It's optional and off by default: turn it on under **Settings → Moon**, and
+the toolbar's view switch gains a *Moon* entry. As the Earth turns, the lines
+sweep westward at about 14.5° an hour — a little slower than the sun's 15°,
+because the moon moves eastward against the stars by about 13° a day. The
+moon marker is always shown on this view, since the lines circle it.
+
+The position is in [`src/lib/astro/lunar.ts`](../src/lib/astro/lunar.ts), the
+lines in [`src/lib/astro/moon.ts`](../src/lib/astro/moon.ts).
 
 ## Moon position
 
@@ -47,10 +63,59 @@ the sky, which delays moonrise and hastens moonset by a few minutes.
 Meeus' shorter formula (48.4); the phase name (new, waxing crescent, …) from
 the mean elongation *D*.
 
+## How each event is defined
+
+**Moonrise and moonset** are the instants the top of the moon's disk touches
+the horizon, seen from the ground through a standard atmosphere. Meeus
+(*Astronomical Algorithms*, ch. 15) folds that into one geocentric altitude
+for the moon's centre:
+
+```
+h₀ = 0.7275 · π − 0°34′        π = the moon's horizontal parallax at that instant
+```
+
+Three effects add up to it:
+
+- **parallax** — seen from Earth's surface rather than its centre, the moon
+  sits lower in the sky by up to π (0.90°–1.03°), so its centre must be that
+  much *higher* geocentrically to show on the horizon;
+- **semi-diameter** — the moon's radius is 0.2725 of Earth's, so its disk is
+  0.2725·π across from centre to edge, and the top of it shows first;
+- **refraction** — the air lifts objects at the horizon by about 34′.
+
+The result is about +0.125°, varying by ±0.03° as the moon's distance changes:
+unlike the sun (−0.833°), the moon's centre is slightly *above* the geocentric
+horizon as it rises, because parallax outweighs the other two. Folding the
+parallax into h₀ means no topocentric conversion is needed.
+
+**Transit** is the moon's upper culmination: crossing the place's meridian,
+at its highest. It's only counted where the moon is above the horizon (higher
+than h₀) as it crosses; elsewhere the moon culminates out of sight.
+
+### From the point under the moon to the lines
+
+On a spherical Earth the moon's geocentric altitude at a place is
+90° minus the place's angular distance from the point under the moon. So at
+any instant:
+
+- the moonrise and moonset lines together are the **circle of places
+  90° − h₀ from the point under the moon**. The half to its west is
+  **moonrise** — the moon there is still east of the meridian, climbing — and
+  the half to its east is **moonset**.
+- the **transit line** is the meridian through the point under the moon, as
+  far as the moon stands higher than h₀ there.
+
+The two halves meet on the meridian under the moon and on the one opposite
+it. Beyond those points, toward the poles, the moon stays up or stays down
+whatever the time of day, so the lines simply stop rather than inventing
+events that don't happen; the transit line reaches the pole on the side where
+the moon stays up, and stops on the other where it can't be seen.
+
 ## Accuracy
 
-`bun run verify-moon` checks the engine against independent references. Every
-61 hours for a year from 1 January 2026, against
+`bun run verify-moon` checks the engine against independent references.
+
+**Position.** Every 61 hours for a year from 1 January 2026, against
 [astronomy-engine][astronomy-engine]:
 
 | Check | Worst difference | Limit |
@@ -62,6 +127,28 @@ the mean elongation *D*.
 It also reproduces Meeus' worked example 47.a (1992 April 12, 0h TT) to its
 last printed digit — λ = 133.162655°, β = −3.229126°, Δ = 368409.7 km,
 π = 0.991990° — so a mistyped coefficient in either table shows up at once.
+
+**The lines.** At instants every 79 hours through October 2026 and four more
+through the year, every fourth point along each line is handed to
+astronomy-engine's own moonrise, moonset and transit searches (its rise and
+set are the top of the disk, seen from the surface, crossing a horizon
+lowered 34′ by refraction): each must have that event at that instant.
+
+| Check | Result | Limit |
+| ----- | -----: | ----: |
+| moonrise, transit and moonset, up to 60° latitude | worst 6 s | 2 min |
+| the same, 60°–66° (reported) | median 3 s, 95% within 36 s, worst 13 min | — |
+| the same, beyond 66° (reported) | median 6 s, 95% within 3 min, worst 2.9 h | — |
+| rise and set lines drawn where the moon doesn't rise or set | none | none |
+| ends of the rise and set lines vs the edges of the always-up and always-down caps | 0.002° | 0.02° |
+| transit line vs where the moon is up as it crosses | exact | 0.2° |
+
+Close to the ends of the rise and set lines the moon only grazes the horizon:
+its altitude barely changes for hours, so an arc-second's difference moves
+the time by minutes — or decides whether it rises at all. That's why
+differences beyond 60° are reported rather than held to a limit, and why the
+"none drawn where it doesn't rise or set" check leaves out the last half
+degree of each line.
 
 ## References
 
