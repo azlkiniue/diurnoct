@@ -27,7 +27,7 @@ information can be toggled on or off to taste.
   sky and setting right now, with the moonlit night — moon up, sun down —
   shaded by how full the moon is, from the full Meeus lunar series. Pin a
   place — the same one as the prayer view — for its moonrise, transit and
-  moonset today. Methodology,
+  moonset today, and the next new and full moon. Methodology,
   sources and accuracy checks are in [`docs/moon.md`](docs/moon.md).
 - 🎚️ **Adjustable verbosity** — three presets (Minimal / Standard / Detailed)
   plus individual toggles for clocks, date, sun & moon markers, the terminator

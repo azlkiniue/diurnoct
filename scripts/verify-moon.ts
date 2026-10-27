@@ -20,6 +20,9 @@
  *      missing an event exactly when it finds none, and moon up or down all
  *      day as it has it. And the map against the timeline: every place on a
  *      line at an instant has that event in its timeline at that instant.
+ *   5. The next new and full moon (Meeus ch. 49) against astronomy-engine's
+ *      phase search, from any instant through a year — including a minute
+ *      either side of each one, so the panel moves on once it has passed.
  *
  * Usage:  bun run verify-moon
  */
@@ -36,11 +39,18 @@ import {
 	RotateVector,
 	Rotation_EQJ_EQD,
 	SearchHourAngle,
+	SearchMoonPhase,
 	SearchRiseSet,
 	SiderealTime
 } from 'astronomy-engine';
 import { solarDay, wrapLon, type GeoPoint } from '../src/lib/astro/solar';
-import { deltaT, moonPhase, moonPosition, sublunarPoint } from '../src/lib/astro/lunar';
+import {
+	deltaT,
+	moonPhase,
+	moonPosition,
+	nextNewAndFullMoon,
+	sublunarPoint
+} from '../src/lib/astro/lunar';
 import { MOON_EVENT_KINDS, moonLines, moonTimeline, type MoonEventKind } from '../src/lib/astro/moon';
 
 const MIN = 60_000;
@@ -373,6 +383,44 @@ for (const t of INSTANTS) {
 			});
 		}
 	}
+}
+
+// ---- 5: the next new and full moon ------------------------------------------------------------
+
+const vsNewMoon = check('Next new moon vs astronomy-engine', 2, minutes);
+const vsFullMoon = check('Next full moon vs astronomy-engine', 2, minutes);
+const theirNext = (lon: number, after: Date) => SearchMoonPhase(lon, after, 40)!.date;
+const starts: Date[] = [];
+for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 15); t += 5 * 24 * HOUR) starts.push(new Date(t));
+// A minute either side of each, so the next one is always the one still to come.
+for (let t = theirNext(0, new Date(Date.UTC(2026, 0, 1))); t.getTime() < Date.UTC(2027, 0, 15); t = theirNext(0, new Date(t.getTime() + HOUR))) {
+	starts.push(new Date(t.getTime() - MIN), new Date(t.getTime() + MIN));
+}
+for (let t = theirNext(180, new Date(Date.UTC(2026, 0, 1))); t.getTime() < Date.UTC(2027, 0, 15); t = theirNext(180, new Date(t.getTime() + HOUR))) {
+	starts.push(new Date(t.getTime() - MIN), new Date(t.getTime() + MIN));
+}
+const lunations = { new: new Set<number>(), full: new Set<number>() };
+for (const after of starts) {
+	const next = nextNewAndFullMoon(after);
+	const theirNew = theirNext(0, after);
+	const theirFull = theirNext(180, after);
+	vsNewMoon((next.newMoon.getTime() - theirNew.getTime()) / MIN, `after ${after.toISOString()}`);
+	vsFullMoon((next.fullMoon.getTime() - theirFull.getTime()) / MIN, `after ${after.toISOString()}`);
+	lunations.new.add(Math.round(theirNew.getTime() / HOUR));
+	lunations.full.add(Math.round(theirFull.getTime() / HOUR));
+}
+check(`… over ${lunations.new.size} new and ${lunations.full.size} full moons (12 or more of each)`, 0, () => 'none short')(
+	Math.min(lunations.new.size, lunations.full.size) >= 12 ? 0 : NaN,
+	'too few lunations'
+);
+
+// Meeus' example 49.a: the new moon of February 1977 (k = −283) at JDE 2443192.65118,
+// 1977 February 18, 3h37m42s TT, so a mistyped term in the corrections shows up.
+{
+	const tt = Date.UTC(1977, 1, 18, 3, 37, 42);
+	const ut = tt - deltaT(new Date(tt)) * 1000;
+	const mine = nextNewAndFullMoon(new Date(ut - 5 * 24 * HOUR)).newMoon;
+	check('Meeus example 49.a', 1 / 60, minutes)((mine.getTime() - ut) / MIN, '1977-02-18 new moon');
 }
 
 // ---- report ---------------------------------------------------------------------------------

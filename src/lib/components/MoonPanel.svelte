@@ -7,7 +7,7 @@
 	} from '$lib/astro/moon';
 	import type { MoonPhase } from '$lib/astro/lunar';
 	import type { Place } from '$lib/stores/settings.svelte';
-	import { formatLatLon, formatTime, tzAbbrev } from '$lib/time';
+	import { formatDayMonth, formatLatLon, formatTime, tzAbbrev } from '$lib/time';
 
 	interface Props {
 		place: Place | null;
@@ -17,6 +17,8 @@
 		/** Its next rise or set. */
 		next: MoonEvent | null;
 		phase: MoonPhase;
+		/** When the next new and full moon are. */
+		phases: { newMoon: Date; fullMoon: Date };
 		now: Date;
 		locating: boolean;
 		locateError: string;
@@ -24,8 +26,27 @@
 		onclear: () => void;
 	}
 
-	let { place, timeline, up, next, phase, now, locating, locateError, onlocate, onclear }: Props =
-		$props();
+	let {
+		place,
+		timeline,
+		up,
+		next,
+		phase,
+		phases,
+		now,
+		locating,
+		locateError,
+		onlocate,
+		onclear
+	}: Props = $props();
+
+	/** The sooner first. */
+	const upcoming = $derived(
+		[
+			{ name: 'New moon', emoji: '🌑', time: phases.newMoon },
+			{ name: 'Full moon', emoji: '🌕', time: phases.fullMoon }
+		].sort((a, b) => a.time.getTime() - b.time.getTime())
+	);
 
 	/** To the nearest minute. */
 	const shown = (time: Date) => new Date(Math.round(time.getTime() / 60_000) * 60_000);
@@ -119,6 +140,16 @@
 			{phase.emoji} {phase.name}
 			<span class="tnum text-[var(--color-ink-dim)]">· {Math.round(phase.illumination * 100)}% lit</span>
 		</div>
+		<ul class="mt-1 space-y-0.5 text-[11px]">
+			{#each upcoming as p (p.name)}
+				<li class="flex justify-between gap-2">
+					<span class="text-[var(--color-ink-dim)]">{p.emoji} {p.name}</span>
+					<span class="tnum text-[var(--color-ink)]">
+						{formatDayMonth(p.time, place.tz)}, {formatTime(shown(p.time), place.tz, false)}
+					</span>
+				</li>
+			{/each}
+		</ul>
 
 		<div class="mt-2 text-[10px] text-[var(--color-ink-dim)]">
 			{place.tz ? 'Local time' : 'In your time zone'} ({tzAbbrev(now, place.tz)})

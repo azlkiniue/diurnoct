@@ -348,3 +348,104 @@ export function moonPhase(date: Date): MoonPhase {
 		emoji: PHASE_EMOJI[idx]
 	};
 }
+
+// ---- new and full moon (Meeus ch. 49) ------------------------------------------------------
+
+/**
+ * Meeus' periodic corrections to the mean new moon and full moon (days): the
+ * coefficient for each, the power of E it carries, then the multiples of M,
+ * M′, F and Ω in the argument. The two phases share all but the first seven.
+ */
+const PHASE_TERMS: [newMoon: number, fullMoon: number, e: number, m: number, mp: number, f: number, om: number][] = [
+	[-0.4072, -0.40614, 0, 0, 1, 0, 0],
+	[0.17241, 0.17302, 1, 1, 0, 0, 0],
+	[0.01608, 0.01614, 0, 0, 2, 0, 0],
+	[0.01039, 0.01043, 0, 0, 0, 2, 0],
+	[0.00739, 0.00734, 1, -1, 1, 0, 0],
+	[-0.00514, -0.00515, 1, 1, 1, 0, 0],
+	[0.00208, 0.00209, 2, 2, 0, 0, 0],
+	[-0.00111, -0.00111, 0, 0, 1, -2, 0],
+	[-0.00057, -0.00057, 0, 0, 1, 2, 0],
+	[0.00056, 0.00056, 1, 1, 2, 0, 0],
+	[-0.00042, -0.00042, 0, 0, 3, 0, 0],
+	[0.00042, 0.00042, 1, 1, 0, 2, 0],
+	[0.00038, 0.00038, 1, 1, 0, -2, 0],
+	[-0.00024, -0.00024, 1, -1, 2, 0, 0],
+	[-0.00017, -0.00017, 0, 0, 0, 0, 1],
+	[-0.00007, -0.00007, 0, 2, 1, 0, 0],
+	[0.00004, 0.00004, 0, 0, 2, -2, 0],
+	[0.00004, 0.00004, 0, 3, 0, 0, 0],
+	[0.00003, 0.00003, 0, 1, 1, -2, 0],
+	[0.00003, 0.00003, 0, 0, 2, 2, 0],
+	[-0.00003, -0.00003, 0, 1, 1, 2, 0],
+	[0.00003, 0.00003, 0, -1, 1, 2, 0],
+	[-0.00002, -0.00002, 0, -1, 1, -2, 0],
+	[-0.00002, -0.00002, 0, 1, 3, 0, 0],
+	[0.00002, 0.00002, 0, 0, 4, 0, 0]
+];
+
+/**
+ * Meeus' 14 additional corrections for every phase (planetary arguments
+ * A1–A14): coefficient (days), then the angle's constant, rate per lunation
+ * and — for A1 alone — T² term.
+ */
+const PLANETARY_TERMS: [coeff: number, a: number, b: number, c?: number][] = [
+	[0.000325, 299.77, 0.107408, -0.009173],
+	[0.000165, 251.88, 0.016321],
+	[0.000164, 251.83, 26.651886],
+	[0.000126, 349.42, 36.412478],
+	[0.00011, 84.66, 18.206239],
+	[0.000062, 141.74, 53.303771],
+	[0.00006, 207.14, 2.453732],
+	[0.000056, 154.84, 7.30686],
+	[0.000047, 34.52, 27.261239],
+	[0.000042, 207.19, 0.121824],
+	[0.00004, 291.34, 1.844379],
+	[0.000037, 161.72, 24.198154],
+	[0.000035, 239.56, 25.513099],
+	[0.000023, 331.55, 3.592518]
+];
+
+/** The instant of lunation `k` (Meeus 49.1): an integer for a new moon, a half for the full moon after it. */
+function phaseInstant(k: number): Date {
+	const full = k % 1 !== 0;
+	const T = k / 1236.85;
+	const T2 = T * T;
+	const T3 = T2 * T;
+	const T4 = T3 * T;
+	const jde =
+		2451550.09766 + 29.530588861 * k + 0.00015437 * T2 - 0.00000015 * T3 + 0.00000000073 * T4;
+
+	const E = 1 - 0.002516 * T - 0.0000074 * T2;
+	const M = 2.5534 + 29.1053567 * k - 0.0000014 * T2 - 0.00000011 * T3;
+	const Mp = 201.5643 + 385.81693528 * k + 0.0107582 * T2 + 0.00001238 * T3 - 0.000000058 * T4;
+	const F = 160.7108 + 390.67050284 * k - 0.0016118 * T2 - 0.00000227 * T3 + 0.000000011 * T4;
+	const Om = 124.7746 - 1.56375588 * k + 0.0020672 * T2 + 0.00000215 * T3;
+
+	let correction = 0;
+	for (const [onNew, onFull, e, m, mp, f, om] of PHASE_TERMS) {
+		correction += (full ? onFull : onNew) * E ** e * Math.sin((m * M + mp * Mp + f * F + om * Om) * RAD);
+	}
+	for (const [coeff, a, b, c = 0] of PLANETARY_TERMS) {
+		correction += coeff * Math.sin((a + b * k + c * T2) * RAD);
+	}
+
+	// Julian Ephemeris Day, on Terrestrial Time, back to the clock.
+	const tt = (jde + correction - 2440587.5) * 86_400_000;
+	return new Date(tt - deltaT(new Date(tt)) * 1000);
+}
+
+/** The first lunation (see phaseInstant) of the kind `half` (0 new, 0.5 full) after `after`. */
+function nextPhase(after: Date, half: 0 | 0.5): Date {
+	let k = Math.floor((daysSinceJ2000(after) / 365.25) * 12.3685) - 1 + half;
+	for (;;) {
+		const t = phaseInstant(k);
+		if (t > after) return t;
+		k++;
+	}
+}
+
+/** When the next new moon and the next full moon after `after` are (Meeus ch. 49, mean phase plus periodic corrections). */
+export function nextNewAndFullMoon(after: Date): { newMoon: Date; fullMoon: Date } {
+	return { newMoon: nextPhase(after, 0), fullMoon: nextPhase(after, 0.5) };
+}

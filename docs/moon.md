@@ -20,7 +20,8 @@ at full moon. Labels along the lines and a legend with today's phase can each
 be turned off under **Settings → Moon**.
 
 A **moon panel** gives one place's moonrise, transit and moonset today,
-whether the moon is up now and when it next rises or sets, and its phase. It
+whether the moon is up now and when it next rises or sets, its phase, and
+the date and time of the next new and full moon. It
 starts at the principal city of your device's time zone, marked *from your
 time zone* since it's only approximate; click the map (a city dot picks that
 city and shows its local time) or use *Use my location* to pin your spot.
@@ -164,6 +165,15 @@ the sun does around the solstices; the panel then says "moon up all day" or
 "moon down all day". Unlike the prayer view's high-latitude rules, nothing is
 estimated: a time is shown only when the event happens.
 
+## Next new and full moon
+
+The panel's next new moon and next full moon come from Meeus ch. 49: the
+mean phase for lunation *k* (49.1), plus 25 periodic terms in the sun's and
+moon's anomalies, the moon's argument of latitude and its node — slightly
+different for new and full moon — and 14 small planetary terms. The result
+is on Terrestrial Time, so ΔT is taken off as for the position. Once one has
+passed, the panel moves on to the one after.
+
 ## Accuracy
 
 `bun run verify-moon` checks the engine against independent references.
@@ -219,6 +229,18 @@ astronomy-engine's moonrise, moonset and transit in the same local day:
 An event within two minutes of midnight may fairly fall on either day, so a
 disagreement there doesn't count as a missing event.
 
+**New and full moon.** From every fifth day of 2026 and a minute either side
+of each new and full moon, against astronomy-engine's phase search — 14 new
+and 14 full moons:
+
+| Check | Worst difference | Limit |
+| ----- | ---------------: | ----: |
+| next new moon | 46 s | 2 min |
+| next full moon | 41 s | 2 min |
+
+It also reproduces Meeus' worked example 49.a, the new moon of 18 February
+1977 at 3h37m42s TT, to within the printed precision.
+
 Close to the ends of the rise and set lines the moon only grazes the horizon:
 its altitude barely changes for hours, so an arc-second's difference moves
 the time by minutes — or decides whether it rises at all. That's why
@@ -231,7 +253,7 @@ degree of each line.
 [astronomy-engine]: https://github.com/cosinekitty/astronomy
 [deltat]: https://eclipse.gsfc.nasa.gov/SEhelp/deltatpoly2004.html
 
-- Jean Meeus, *Astronomical Algorithms*, 2nd ed. (Willmann-Bell, 1998) — ch. 22 (obliquity), ch. 47 (position of the moon), ch. 48 (illuminated fraction)
+- Jean Meeus, *Astronomical Algorithms*, 2nd ed. (Willmann-Bell, 1998) — ch. 15 (rising and setting), ch. 22 (obliquity), ch. 47 (position of the moon), ch. 48 (illuminated fraction), ch. 49 (phases of the moon)
 - M. Chapront-Touzé & J. Chapront, *ELP 2000-82* lunar theory — the series Meeus abridges
 - F. Espenak & J. Meeus, *Polynomial expressions for Delta T*, NASA — <https://eclipse.gsfc.nasa.gov/SEhelp/deltatpoly2004.html>
 - astronomy-engine — <https://github.com/cosinekitty/astronomy>

@@ -49,6 +49,16 @@ export function formatDate(date: Date, tz?: string): string {
 	}).format(date);
 }
 
+/** Weekday, day and month, e.g. "Tue 10 Nov". */
+export function formatDayMonth(date: Date, tz?: string): string {
+	return fmt(`dm:${tz ?? 'local'}`, {
+		timeZone: tz,
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short'
+	}).format(date);
+}
+
 export function formatUTC(date: Date, withSeconds = true): string {
 	return formatTime(date, 'UTC', withSeconds);
 }

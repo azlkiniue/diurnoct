@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { settings } from '$lib/stores/settings.svelte';
-	import { sublunarPoint, moonPhase } from '$lib/astro/lunar';
+	import { sublunarPoint, moonPhase, nextNewAndFullMoon } from '$lib/astro/lunar';
 	import { moonLines, moonTimeline, upAndNext } from '$lib/astro/moon';
 	import { CITIES } from '$lib/astro/cities';
 	import { solarDay } from '$lib/astro/solar';
@@ -39,6 +39,7 @@
 	const layers = $derived(viewLayers(viewById('moon'), st.layers));
 	const moon = $derived(sublunarPoint(view.time));
 	const phase = $derived(moonPhase(view.time));
+	const phases = $derived(nextNewAndFullMoon(view.time));
 </script>
 
 <svelte:head>
@@ -63,6 +64,7 @@
 		up={status?.up ?? false}
 		next={status?.next ?? null}
 		{phase}
+		{phases}
 		now={view.time}
 		locating={picker.locating}
 		locateError={picker.locateError}
