@@ -8,6 +8,8 @@
 
 const RAD = Math.PI / 180;
 const DEG = 180 / Math.PI;
+const HOUR_MS = 3_600_000;
+const DAY_MS = 86_400_000;
 
 export interface GeoPoint {
 	/** degrees, +N */
@@ -41,7 +43,7 @@ export function wrapLon(lon: number): number {
  * the day of a place's timetable, midnight to midnight, with no time zone.
  */
 export function solarDay(lon: number, at: Date): number {
-	return Math.floor((at.getTime() + (lon / 15) * 3_600_000) / 86_400_000);
+	return Math.floor((at.getTime() + (lon / 15) * HOUR_MS) / DAY_MS);
 }
 
 /** Greenwich Mean Sidereal Time, in degrees. */
@@ -105,6 +107,11 @@ export function geoToVec3({ lat, lon }: GeoPoint): [number, number, number] {
 	const lo = lon * RAD;
 	const cosLa = Math.cos(la);
 	return [cosLa * Math.cos(lo), Math.sin(la), cosLa * Math.sin(lo)];
+}
+
+/** The lat/lon a unit vector points at: the inverse of geoToVec3. */
+export function vec3ToGeo([x, y, z]: [number, number, number]): GeoPoint {
+	return { lat: Math.asin(Math.max(-1, Math.min(1, y))) * DEG, lon: Math.atan2(z, x) * DEG };
 }
 
 /**

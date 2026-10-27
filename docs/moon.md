@@ -144,7 +144,8 @@ so it tracks how much light the moon actually gives.
 **The day** is the place's local mean-solar day, midnight to midnight at its
 meridian — the same day the prayer timetable uses, so "today" means the same
 in both views and no time zone is needed. Times are shown to the nearest
-minute, in the place's local time when it's a city (otherwise in yours).
+minute, in the place's local time when its time zone is known — a city, or
+your own location — and otherwise in yours.
 
 **Each time** is the instant the same condition that draws the lines holds at
 the place, with the same moon position and parallax: its altitude crosses h₀

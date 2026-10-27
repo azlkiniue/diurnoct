@@ -445,7 +445,12 @@ function nextPhase(after: Date, half: 0 | 0.5): Date {
 	}
 }
 
+export interface NextPhases {
+	newMoon: Date;
+	fullMoon: Date;
+}
+
 /** When the next new moon and the next full moon after `after` are (Meeus ch. 49, mean phase plus periodic corrections). */
-export function nextNewAndFullMoon(after: Date): { newMoon: Date; fullMoon: Date } {
+export function nextNewAndFullMoon(after: Date): NextPhases {
 	return { newMoon: nextPhase(after, 0), fullMoon: nextPhase(after, 0.5) };
 }

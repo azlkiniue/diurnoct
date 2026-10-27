@@ -21,7 +21,7 @@
  */
 
 import { moonPhase, moonPosition } from './lunar';
-import { geoToVec3, gmstDeg, sunState, wrapLon, type GeoPoint } from './solar';
+import { geoToVec3, gmstDeg, sunState, vec3ToGeo, wrapLon, type GeoPoint } from './solar';
 
 const RAD = Math.PI / 180;
 const DEG = 180 / Math.PI;
@@ -174,11 +174,6 @@ const cross = (a: Vec, b: Vec): Vec => [
 const plus = (a: Vec, b: Vec): Vec => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const times = (a: Vec, k: number): Vec => [a[0] * k, a[1] * k, a[2] * k];
 const unit = (a: Vec): Vec => times(a, 1 / Math.hypot(...a));
-/** Inverse of geoToVec3. */
-const toGeo = ([x, y, z]: Vec): GeoPoint => ({
-	lat: Math.asin(Math.max(-1, Math.min(1, y))) * DEG,
-	lon: Math.atan2(z, x) * DEG
-});
 
 /** The places within a circle on the globe: those `p` with p · centre ≥ cos. */
 interface Cap {
@@ -211,7 +206,7 @@ function edge(cap: Cap, from: Vec, to: Vec, other: Cap): GeoPoint[] {
 	let sweep = Math.atan2(dot(to, v), dot(to, u)) * DEG;
 	if (sweep <= 0) sweep += 360;
 	if (!inCap(other, at(sweep / 2))) sweep -= 360;
-	return trace((deg) => toGeo(at(deg)), 0, sweep);
+	return trace((deg) => vec3ToGeo(at(deg)), 0, sweep);
 }
 
 /** Where the moon is up (`moon`, its circle of rise and set) and the sun down. */
@@ -329,16 +324,16 @@ function eventsBetween(place: GeoPoint, from: number, to: number): MoonEvent[] {
 		.filter((c) => c.upper && moonFrom(place, c.t).height > 0)
 		.map((c) => ({ kind: 'transit', time: new Date(c.t) }));
 
-	const edges: number[] = [];
+	const samples: number[] = [];
 	const ends = [from, ...marks.map((c) => c.t), to];
 	for (let i = 1; i < ends.length; i++) {
 		const n = Math.ceil((ends[i] - ends[i - 1]) / SAMPLE_MS);
-		for (let k = 0; k < n; k++) edges.push(ends[i - 1] + ((ends[i] - ends[i - 1]) * k) / n);
+		for (let k = 0; k < n; k++) samples.push(ends[i - 1] + ((ends[i] - ends[i - 1]) * k) / n);
 	}
-	edges.push(to);
-	let a = edges[0];
+	samples.push(to);
+	let a = samples[0];
 	let upA = moonFrom(place, a).height > 0;
-	for (const b of edges.slice(1)) {
+	for (const b of samples.slice(1)) {
 		const upB = moonFrom(place, b).height > 0;
 		if (upA !== upB) {
 			let lo = a;

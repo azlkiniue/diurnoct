@@ -1,8 +1,10 @@
 /**
  * The views the toolbar switches between. Day & night is always there; each
  * other view is opt-in — turned on in its own settings section, opened with
- * its own key, which toggles Day & night ↔ that view. Adding a view means
- * adding an entry here, plus its page.
+ * its own key, which toggles Day & night ↔ that view. The layout's keys and
+ * view switch work from this list; adding a view means an entry here, its
+ * page, its settings and their section in the settings panel, and its icon
+ * in the toolbar.
  */
 
 import type { Pathname, RouteId } from '$app/types';

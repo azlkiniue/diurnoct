@@ -5,7 +5,7 @@
 		type MoonEvent,
 		type MoonTimeline
 	} from '$lib/astro/moon';
-	import type { MoonPhase } from '$lib/astro/lunar';
+	import type { MoonPhase, NextPhases } from '$lib/astro/lunar';
 	import type { Place } from '$lib/stores/settings.svelte';
 	import { formatDayMonth, formatLatLon, formatTime, tzAbbrev } from '$lib/time';
 
@@ -17,8 +17,7 @@
 		/** Its next rise or set. */
 		next: MoonEvent | null;
 		phase: MoonPhase;
-		/** When the next new and full moon are. */
-		phases: { newMoon: Date; fullMoon: Date };
+		phases: NextPhases;
 		now: Date;
 		locating: boolean;
 		locateError: string;
@@ -39,6 +38,9 @@
 		onlocate,
 		onclear
 	}: Props = $props();
+
+	/** The place's time zone when known, else the viewer's. */
+	const tz = $derived(place?.tz);
 
 	/** The sooner first. */
 	const upcoming = $derived(
@@ -135,25 +137,6 @@
 		{#if notes.length}
 			<p class="mt-1 px-1.5 text-[11px] text-[var(--color-dusk)]">{notes.join(' · ')}</p>
 		{/if}
-
-		<div class="mt-2 border-t border-white/10 pt-2 text-[var(--color-ink)]">
-			{phase.emoji} {phase.name}
-			<span class="tnum text-[var(--color-ink-dim)]">· {Math.round(phase.illumination * 100)}% lit</span>
-		</div>
-		<ul class="mt-1 space-y-0.5 text-[11px]">
-			{#each upcoming as p (p.name)}
-				<li class="flex justify-between gap-2">
-					<span class="text-[var(--color-ink-dim)]">{p.emoji} {p.name}</span>
-					<span class="tnum text-[var(--color-ink)]">
-						{formatDayMonth(p.time, place.tz)}, {formatTime(shown(p.time), place.tz, false)}
-					</span>
-				</li>
-			{/each}
-		</ul>
-
-		<div class="mt-2 text-[10px] text-[var(--color-ink-dim)]">
-			{place.tz ? 'Local time' : 'In your time zone'} ({tzAbbrev(now, place.tz)})
-		</div>
 	{:else}
 		<div class="text-sm font-medium text-[var(--color-ink)]">Moon times for a place</div>
 		<p class="mt-1 text-[var(--color-ink-dim)]">Click anywhere on the map, or</p>
@@ -171,6 +154,26 @@
 			{locating ? 'Locating…' : 'Use my location'}
 		</button>
 	{/if}
+
+	<!-- The phase and the next new and full moon hold for any place. -->
+	<div class="mt-2 border-t border-white/10 pt-2 text-[var(--color-ink)]">
+		{phase.emoji} {phase.name}
+		<span class="tnum text-[var(--color-ink-dim)]">· {Math.round(phase.illumination * 100)}% lit</span>
+	</div>
+	<ul class="mt-1 space-y-0.5 text-[11px]">
+		{#each upcoming as p (p.name)}
+			<li class="flex justify-between gap-2">
+				<span class="text-[var(--color-ink-dim)]">{p.emoji} {p.name}</span>
+				<span class="tnum text-[var(--color-ink)]">
+					{formatDayMonth(p.time, tz)}, {formatTime(shown(p.time), tz, false)}
+				</span>
+			</li>
+		{/each}
+	</ul>
+
+	<div class="mt-2 text-[10px] text-[var(--color-ink-dim)]">
+		{tz ? 'Local time' : 'In your time zone'} ({tzAbbrev(now, tz)})
+	</div>
 
 	{#if locateError}
 		<p class="mt-2 text-[11px] text-[var(--color-dusk)]">{locateError}</p>

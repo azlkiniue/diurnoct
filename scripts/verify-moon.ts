@@ -103,7 +103,8 @@ function check(name: string, tolerance: number, format: (n: number) => string): 
 }
 
 const degrees = (digits: number) => (n: number) => `${n.toFixed(digits)}°`;
-const minutes = (n: number) => `${(n * 60).toFixed(1)} s`;
+/** A difference in minutes, shown in seconds. */
+const asSeconds = (n: number) => `${(n * 60).toFixed(1)} s`;
 
 /** Angle between two points on the globe, degrees. */
 function separation(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
@@ -225,9 +226,9 @@ function capEdges(t: Date): { south: number; north: number } {
 	};
 }
 
-const linesVsThem = check('Moonrise, transit and moonset lines vs astronomy-engine (|lat| ≤ 60°)', 2, minutes);
-const linesVsThemSubpolar = check('… 60°–66°, reported', Infinity, minutes);
-const linesVsThemPolar = check('… beyond 66°, reported', Infinity, minutes);
+const linesVsThem = check('Moonrise, transit and moonset lines vs astronomy-engine (|lat| ≤ 60°)', 2, asSeconds);
+const linesVsThemSubpolar = check('… 60°–66°, reported', Infinity, asSeconds);
+const linesVsThemPolar = check('… beyond 66°, reported', Infinity, asSeconds);
 const noInventedEvents = check('No rise or set line where the moon stays up or down', 0, () => 'none missing');
 const lineEnds = check('Rise and set lines end at the edges of the always-up and always-down caps', 0.02, degrees(4));
 const transitExtent = check('Transit line drawn just where the moon is up as it crosses', 0.2, degrees(2));
@@ -329,8 +330,8 @@ function theirDay(p: GeoPoint, from: number, to: number): Record<MoonEventKind, 
 	};
 }
 
-const timesVsThem = check('Moonrise, transit and moonset times vs astronomy-engine (|lat| ≤ 60°)', 2, minutes);
-const timesVsThemPolar = check('… beyond 60°, reported', Infinity, minutes);
+const timesVsThem = check('Moonrise, transit and moonset times vs astronomy-engine (|lat| ≤ 60°)', 2, asSeconds);
+const timesVsThemPolar = check('… beyond 60°, reported', Infinity, asSeconds);
 const missingAgree = check('A day misses an event exactly when astronomy-engine finds none', 0, () => 'none');
 const allDayAgree = check('Moon up or down all day, as astronomy-engine has it', 0, () => 'none');
 
@@ -365,7 +366,7 @@ for (const [name, lat, lon] of PLACES) {
 }
 
 // Every place on a line at an instant has that event in its timeline then.
-const linesVsTimeline = check('Map lines vs timeline', 5 / 60, minutes);
+const linesVsTimeline = check('Map lines vs timeline', 5 / 60, asSeconds);
 for (const t of INSTANTS) {
 	const lines = moonLines(t);
 	for (const kind of MOON_EVENT_KINDS) {
@@ -387,8 +388,8 @@ for (const t of INSTANTS) {
 
 // ---- 5: the next new and full moon ------------------------------------------------------------
 
-const vsNewMoon = check('Next new moon vs astronomy-engine', 2, minutes);
-const vsFullMoon = check('Next full moon vs astronomy-engine', 2, minutes);
+const vsNewMoon = check('Next new moon vs astronomy-engine', 2, asSeconds);
+const vsFullMoon = check('Next full moon vs astronomy-engine', 2, asSeconds);
 const theirNext = (lon: number, after: Date) => SearchMoonPhase(lon, after, 40)!.date;
 const starts: Date[] = [];
 for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 15); t += 5 * 24 * HOUR) starts.push(new Date(t));
@@ -420,7 +421,7 @@ check(`… over ${lunations.new.size} new and ${lunations.full.size} full moons 
 	const tt = Date.UTC(1977, 1, 18, 3, 37, 42);
 	const ut = tt - deltaT(new Date(tt)) * 1000;
 	const mine = nextNewAndFullMoon(new Date(ut - 5 * 24 * HOUR)).newMoon;
-	check('Meeus example 49.a', 1 / 60, minutes)((mine.getTime() - ut) / MIN, '1977-02-18 new moon');
+	check('Meeus example 49.a', 1 / 60, asSeconds)((mine.getTime() - ut) / MIN, '1977-02-18 new moon');
 }
 
 // ---- report ---------------------------------------------------------------------------------
