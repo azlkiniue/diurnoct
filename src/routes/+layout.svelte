@@ -13,6 +13,7 @@
 	import { resolveSources } from '$lib/config';
 	import { computeMapRect, insideRect, unproject } from '$lib/map/projection';
 	import { setMapView } from '$lib/map/view';
+	import { HOME, VIEWS, viewAt, type View } from '$lib/views';
 
 	import MapCanvas from '$lib/components/MapCanvas.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -38,8 +39,8 @@
 	const sun = $derived(sunState(time));
 	const sources = $derived(resolveSources(base, st.texture));
 	const rect = $derived(computeMapRect(w, h, st.map.fit));
-	const prayerView = $derived(page.route.id === '/prayer');
-	const prayerEnabled = $derived(st.prayer.enabled);
+	const view = $derived(viewAt(page.route.id));
+	const enabledViews = $derived(VIEWS.filter((v) => v.enabled(st)));
 
 	const params = $derived({
 		nightBrightness: st.map.nightBrightness,
@@ -121,14 +122,15 @@
 		}
 	}
 
-	function toggleView() {
-		goto(prayerView ? resolve('/') : resolve('/prayer/'));
+	/** Open `target`, or go back to Day & night when it's already showing. */
+	function toggleView(target: View) {
+		goto(resolve(view.id === target.id ? HOME.path : target.path));
 	}
 
-	// The prayer-times view is opt-in: leave it whenever it's off — switched off
-	// in settings, or reached by its URL before being switched on.
+	// Optional views are opt-in: leave one whenever it's off — switched off in
+	// settings, or reached by its URL before being switched on.
 	$effect(() => {
-		if (prayerView && !prayerEnabled) goto(resolve('/'), { replaceState: true });
+		if (!view.enabled(st)) goto(resolve(HOME.path), { replaceState: true });
 	});
 
 	function isTyping(target: EventTarget | null): boolean {
@@ -141,15 +143,13 @@
 	function onKeydown(e: KeyboardEvent) {
 		if (isTyping(e.target)) return;
 		poke();
-		switch (e.key.toLowerCase()) {
+		const key = e.key.toLowerCase();
+		switch (key) {
 			case 'h':
 				uiHidden = !uiHidden;
 				break;
 			case 'f':
 				toggleFullscreen();
-				break;
-			case 'p':
-				if (prayerEnabled) toggleView();
 				break;
 			case 's':
 			case ',':
@@ -158,6 +158,10 @@
 			case 'escape':
 				if (settingsOpen) settingsOpen = false;
 				break;
+			default: {
+				const target = VIEWS.find((v) => v.key === key);
+				if (target?.enabled(st)) toggleView(target);
+			}
 		}
 	}
 
@@ -206,15 +210,15 @@
 		<Toolbar
 			{uiHidden}
 			{isFullscreen}
-			{prayerView}
-			{prayerEnabled}
+			current={view.id}
+			views={enabledViews}
 			onToggleHide={() => (uiHidden = !uiHidden)}
 			onToggleFullscreen={toggleFullscreen}
 			onSettings={() => (settingsOpen = true)}
 		/>
 	</div>
 
-	<SettingsPanel open={settingsOpen} {prayerView} onclose={() => (settingsOpen = false)} />
+	<SettingsPanel open={settingsOpen} view={view.id} onclose={() => (settingsOpen = false)} />
 </main>
 
 <LoadingScreen visible={!mapReady} />

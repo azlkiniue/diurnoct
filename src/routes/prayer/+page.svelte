@@ -17,6 +17,7 @@
 	import { localTimeZone } from '$lib/time';
 	import { project } from '$lib/map/projection';
 	import { getMapView } from '$lib/map/view';
+	import { viewById, viewLayers } from '$lib/views';
 
 	import MapOverlay from '$lib/components/MapOverlay.svelte';
 	import PrayerOverlay from '$lib/components/PrayerOverlay.svelte';
@@ -57,8 +58,7 @@
 	const timeline = $derived(place ? prayerTimeline(place, day, cfg) : null);
 	const status = $derived(timeline ? currentAndNext(timeline.events, view.time) : null);
 
-	// The prayer lines stand in for the terminator, and bring their own legend.
-	const layers = $derived({ ...st.layers, terminatorLine: false, legend: false });
+	const layers = $derived(viewLayers(viewById('prayer'), st.layers));
 	const moon = $derived(sublunarPoint(view.time));
 	const phase = $derived(moonPhase(view.time));
 

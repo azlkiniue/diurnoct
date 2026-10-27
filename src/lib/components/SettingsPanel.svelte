@@ -10,15 +10,16 @@
 		type MethodId
 	} from '$lib/astro/prayer';
 	import type { FitMode } from '$lib/map/projection';
+	import { VIEWS, viewById, type ViewId } from '$lib/views';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
 		open: boolean;
-		/** Showing the prayer-times view: adds its section, drops day & night-only layers. */
-		prayerView: boolean;
+		/** Which view is showing: its section comes first, and layers it decides for itself are left out. */
+		view: ViewId;
 		onclose: () => void;
 	}
-	let { open, prayerView, onclose }: Props = $props();
+	let { open, view, onclose }: Props = $props();
 
 	const s = settings; // `s.current` is reactive
 
@@ -36,11 +37,7 @@
 	const rule = $derived(
 		HIGH_LAT_RULES.find((r) => r.id === s.current.prayer.highLat) ?? HIGH_LAT_RULES[0]
 	);
-	const layerMeta = $derived(
-		prayerView
-			? LAYER_META.filter((l) => l.key !== 'terminatorLine' && l.key !== 'legend')
-			: LAYER_META
-	);
+	const layerMeta = $derived(LAYER_META.filter((l) => !(l.key in viewById(view).layers)));
 
 	function pad(n: number) {
 		return String(n).padStart(2, '0');
@@ -200,7 +197,7 @@
 				)}
 			</div>
 
-			{#if s.current.prayer.enabled && prayerView}
+			{#if s.current.prayer.enabled && view === 'prayer'}
 				<div>
 					<label for="prayer-method" class="mb-1.5 block text-xs text-[var(--color-ink-dim)]">
 						Calculation method
@@ -300,9 +297,14 @@
 			{/if}
 		</div>
 	{/snippet}
-	{#if prayerView}
-		{@render section('Prayer times', prayerBody)}
-	{/if}
+
+	<!-- Each optional view's section: the showing view's first, the others at the end. -->
+	{#snippet viewSection(id: ViewId)}
+		{#if id === 'prayer'}
+			{@render section('Prayer times', prayerBody)}
+		{/if}
+	{/snippet}
+	{@render viewSection(view)}
 
 	{#snippet verbosityBody()}
 		{@render seg(
@@ -497,9 +499,11 @@
 	{/snippet}
 	{@render section('Satellite textures', texBody)}
 
-	{#if !prayerView}
-		{@render section('Prayer times', prayerBody)}
-	{/if}
+	{#each VIEWS as v (v.id)}
+		{#if v.id !== view}
+			{@render viewSection(v.id)}
+		{/if}
+	{/each}
 
 	{#snippet footerBody()}
 		<div class="space-y-3">
@@ -514,9 +518,11 @@
 					<span><kbd class="kbd">H</kbd> hide UI</span>
 					<span><kbd class="kbd">F</kbd> fullscreen</span>
 					<span><kbd class="kbd">S</kbd> settings</span>
-					{#if s.current.prayer.enabled}
-						<span><kbd class="kbd">P</kbd> prayer times</span>
-					{/if}
+					{#each VIEWS as v (v.id)}
+						{#if v.key && v.enabled(s.current)}
+							<span><kbd class="kbd">{v.key.toUpperCase()}</kbd> {v.label.toLowerCase()}</span>
+						{/if}
+					{/each}
 					<span><kbd class="kbd">Esc</kbd> close</span>
 				</div>
 			</div>

@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import type { View, ViewId } from '$lib/views';
 
 	interface Props {
 		uiHidden: boolean;
 		isFullscreen: boolean;
-		/** Which view is showing: prayer times, or day & night. */
-		prayerView: boolean;
-		/** The prayer-times view is switched on in settings, so offer the view switch. */
-		prayerEnabled: boolean;
+		/** Which view is showing. */
+		current: ViewId;
+		/** Day & night and each view turned on in settings; the switch shows when there's a choice. */
+		views: View[];
 		onToggleHide: () => void;
 		onToggleFullscreen: () => void;
 		onSettings: () => void;
@@ -15,33 +16,45 @@
 	let {
 		uiHidden,
 		isFullscreen,
-		prayerView,
-		prayerEnabled,
+		current,
+		views,
 		onToggleHide,
 		onToggleFullscreen,
 		onSettings
 	}: Props = $props();
+
+	/** Each view's key toggles it with Day & night, so Day & night answers to all of them. */
+	const keys = $derived(
+		views.flatMap((v) => (v.key ? [v.key.toUpperCase()] : [])).join(' / ')
+	);
+	const title = (v: View) => `${v.label} (${v.key ? v.key.toUpperCase() : keys})`;
 </script>
 
 <div class="pointer-events-auto absolute top-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full panel px-1.5 py-1.5 shadow-xl">
-	{#if prayerEnabled}
+	{#if views.length > 1}
 		<nav class="flex items-center gap-0.5 rounded-full bg-white/5 p-0.5" aria-label="Views">
-			<a href={resolve('/')} class="view" class:on={!prayerView} aria-current={prayerView ? undefined : 'page'} title="Day & night (P)">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-					<circle cx="12" cy="12" r="9" />
-					<path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" />
-				</svg>
-				<span class="hidden sm:inline">Day &amp; night</span>
-			</a>
-			<a href={resolve('/prayer/')} class="view" class:on={prayerView} aria-current={prayerView ? 'page' : undefined} title="Prayer times (P)">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-					<path d="M12 3v3" />
-					<path d="M6 13a6 6 0 0 1 12 0" />
-					<path d="M4 21v-8h16v8Z" />
-					<path d="M10 21v-3a2 2 0 0 1 4 0v3" />
-				</svg>
-				<span class="hidden sm:inline">Prayer times</span>
-			</a>
+			{#each views as v (v.id)}
+				<a
+					href={resolve(v.path)}
+					class="view"
+					class:on={v.id === current}
+					aria-current={v.id === current ? 'page' : undefined}
+					title={title(v)}
+				>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						{#if v.id === 'day'}
+							<circle cx="12" cy="12" r="9" />
+							<path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" />
+						{:else if v.id === 'prayer'}
+							<path d="M12 3v3" />
+							<path d="M6 13a6 6 0 0 1 12 0" />
+							<path d="M4 21v-8h16v8Z" />
+							<path d="M10 21v-3a2 2 0 0 1 4 0v3" />
+						{/if}
+					</svg>
+					<span class="hidden sm:inline">{v.label}</span>
+				</a>
+			{/each}
 		</nav>
 
 		<span class="mx-0.5 h-5 w-px bg-white/10" aria-hidden="true"></span>
