@@ -53,6 +53,16 @@ export function project(lat: number, lon: number, rect: Rect): { x: number; y: n
 	};
 }
 
+/** SVG path data for a line through geographic points, inside `rect`. */
+export function linePath(points: { lat: number; lon: number }[], rect: Rect): string {
+	return points
+		.map((p, i) => {
+			const { x, y } = project(p.lat, p.lon, rect);
+			return `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
+		})
+		.join('');
+}
+
 /** Screen pixel -> geographic (lat/lon, degrees). */
 export function unproject(x: number, y: number, rect: Rect): { lat: number; lon: number } {
 	return {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { wrapLon, type GeoPoint } from '$lib/astro/solar';
+	import type { GeoPoint } from '$lib/astro/solar';
 	import { MAKKAH } from '$lib/astro/cities';
 	import {
 		PRAYER_KEYS,
@@ -9,6 +9,7 @@
 		type PrayerLines
 	} from '$lib/astro/prayer';
 	import { project, type Rect } from '$lib/map/projection';
+	import LineOverlay from './LineOverlay.svelte';
 
 	interface Props {
 		rect: Rect;
@@ -25,26 +26,18 @@
 
 	let { rect, width, height, lines, sunLat, labels, place, scale }: Props = $props();
 
-	const uid = $props.id();
 	const r = (n: number) => n * scale;
 
 	/** Solid where the sign occurs; dashed where a rule estimates it; dotted for the polar 45° rule. */
 	const dash = (basis: Basis) =>
 		basis === 'sun' ? undefined : basis === 'rule' ? `${r(7)} ${r(5)}` : `${r(0.5)} ${r(5)}`;
 
-	// Longitudes are unwrapped, so paths run off the map's edges; the markup draws
-	// each one again a world to the left and right, clipped to the map.
-	const paths = $derived(
+	const strokes = $derived(
 		PRAYER_KEYS.flatMap((key) =>
 			lines[key].map((seg) => ({
-				key,
-				basis: seg.basis,
-				d: seg.points
-					.map((p, i) => {
-						const { x, y } = project(p.lat, p.lon, rect);
-						return `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
-					})
-					.join('')
+				points: seg.points,
+				color: `var(--color-${key})`,
+				dash: dash(seg.basis)
 			}))
 		)
 	);
@@ -74,11 +67,7 @@
 				}
 			}
 		}
-		if (!best) return null;
-		const at = project(best.lat, wrapLon(best.lon), rect);
-		// Flip to the line's left when the label would run off the map.
-		const flip = at.x + r(64) > rect.left + rect.width;
-		return { key, x: at.x + (flip ? -r(6) : r(6)), y: at.y - r(4), flip };
+		return best && { text: PRAYER_NAMES[key].name, color: `var(--color-${key})`, at: best };
 	}
 
 	const labelPts = $derived(
@@ -86,60 +75,9 @@
 	);
 
 	const kaaba = $derived(project(MAKKAH.lat, MAKKAH.lon, rect));
-	const pin = $derived(place ? project(place.lat, place.lon, rect) : null);
 </script>
 
-<svg
-	class="pointer-events-none absolute inset-0"
-	{width}
-	{height}
-	viewBox={`0 0 ${width} ${height}`}
-	fill="none"
->
-	<defs>
-		<clipPath id={`map-${uid}`}>
-			<rect x={rect.left} y={rect.top} width={rect.width} height={rect.height} />
-		</clipPath>
-	</defs>
-
-	<g clip-path={`url(#map-${uid})`} stroke-linecap="round" stroke-linejoin="round">
-		{#each [-1, 0, 1] as shift (shift)}
-			<g transform={`translate(${shift * rect.width} 0)`}>
-				<!-- A dark casing keeps every line legible over bright desert and ice. -->
-				{#each paths as p, i (i)}
-					<path
-						d={p.d}
-						stroke="rgb(3 6 14 / 0.6)"
-						stroke-width={r(4.5)}
-						stroke-dasharray={dash(p.basis)}
-					/>
-				{/each}
-				{#each paths as p, i (i)}
-					<path
-						d={p.d}
-						stroke={`var(--color-${p.key})`}
-						stroke-width={r(2)}
-						stroke-dasharray={dash(p.basis)}
-					/>
-				{/each}
-			</g>
-		{/each}
-	</g>
-
-	{#if labels}
-		<g
-			font-size={r(11)}
-			font-weight="600"
-			style={`paint-order: stroke; stroke: var(--color-space); stroke-width: ${r(3)}px; stroke-linejoin: round;`}
-		>
-			{#each labelPts as l (l.key)}
-				<text x={l.x} y={l.y} fill={`var(--color-${l.key})`} text-anchor={l.flip ? 'end' : 'start'}>
-					{PRAYER_NAMES[l.key].name}
-				</text>
-			{/each}
-		</g>
-	{/if}
-
+<LineOverlay {rect} {width} {height} lines={strokes} labels={labelPts} {place} {scale}>
 	<!-- The Kaaba, which every prayer faces. -->
 	<g>
 		<rect
@@ -164,18 +102,4 @@
 			</text>
 		{/if}
 	</g>
-
-	{#if pin}
-		<g>
-			<circle cx={pin.x} cy={pin.y} r={r(9)} fill="var(--color-ink)" opacity="0.15" />
-			<circle
-				cx={pin.x}
-				cy={pin.y}
-				r={r(4)}
-				fill="var(--color-ink)"
-				stroke="var(--color-space)"
-				stroke-width={r(1.5)}
-			/>
-		</g>
-	{/if}
-</svg>
+</LineOverlay>

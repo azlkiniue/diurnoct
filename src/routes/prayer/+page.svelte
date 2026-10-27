@@ -70,15 +70,11 @@
 
 {#snippet timetable()}
 	<PrayerTimetable
-		{place}
 		{timeline}
 		current={status?.current ?? null}
 		next={status?.next ?? null}
 		now={view.time}
-		locating={picker.locating}
-		locateError={picker.locateError}
-		onlocate={picker.locate}
-		onclear={picker.clear}
+		{picker}
 	/>
 {/snippet}
 

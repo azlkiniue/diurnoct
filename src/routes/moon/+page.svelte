@@ -59,17 +59,13 @@
 
 {#snippet panel()}
 	<MoonPanel
-		{place}
 		{timeline}
 		up={status?.up ?? false}
 		next={status?.next ?? null}
 		{phase}
 		{phases}
 		now={view.time}
-		locating={picker.locating}
-		locateError={picker.locateError}
-		onlocate={picker.locate}
-		onclear={picker.clear}
+		{picker}
 	/>
 {/snippet}
 

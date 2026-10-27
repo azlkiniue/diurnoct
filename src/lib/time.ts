@@ -59,6 +59,15 @@ export function formatDayMonth(date: Date, tz?: string): string {
 	}).format(date);
 }
 
+/** How long from `now` until `to`, in whole minutes, e.g. "2 h 5 min". */
+export function formatCountdown(now: Date, to: Date): string {
+	const min = Math.floor((to.getTime() - now.getTime()) / 60_000);
+	if (min < 1) return 'under a minute';
+	const h = Math.floor(min / 60);
+	const m = min % 60;
+	return h ? `${h} h ${m} min` : `${m} min`;
+}
+
 export function formatUTC(date: Date, withSeconds = true): string {
 	return formatTime(date, 'UTC', withSeconds);
 }
