@@ -1,10 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { settings, type PrayerPlace } from '$lib/stores/settings.svelte';
+	import { settings } from '$lib/stores/settings.svelte';
 	import { sublunarPoint, moonPhase } from '$lib/astro/lunar';
 	import { CITIES, MAKKAH } from '$lib/astro/cities';
-	import { zoneCity } from '$lib/astro/zones';
-	import type { GeoPoint } from '$lib/astro/solar';
 	import {
 		currentAndNext,
 		methodById,
@@ -14,9 +11,8 @@
 		type PrayerConfig
 	} from '$lib/astro/prayer';
 	import { APP_NAME } from '$lib/config';
-	import { localTimeZone } from '$lib/time';
-	import { project } from '$lib/map/projection';
 	import { getMapView } from '$lib/map/view';
+	import { placePicker } from '$lib/map/place.svelte';
 	import { viewById, viewLayers } from '$lib/views';
 
 	import MapOverlay from '$lib/components/MapOverlay.svelte';
@@ -40,20 +36,14 @@
 
 	const lines = $derived(prayerLines(view.time, cfg));
 
-	// Until the viewer picks a place, the timetable follows their time zone's
-	// city: approximate, but it needs no permission. Browser-only, so it's set
-	// once mounted.
-	let zonePlace = $state<PrayerPlace | null>(null);
-	onMount(() => {
-		const city = zoneCity(localTimeZone());
-		if (city) {
-			zonePlace = { lat: city.lat, lon: city.lon, name: city.name, tz: city.tz, approx: true };
-		}
+	// Clicks snap to the Kaaba marker, and to the city dots when they're shown.
+	const picker = placePicker({
+		active: () => prayer.timetable,
+		markers: () => (st.layers.cities ? [MAKKAH, ...CITIES] : [MAKKAH])
 	});
 
 	// Recomputed once per solar day at the place, not every tick.
-	const chosen = $derived(prayer.place === undefined ? zonePlace : prayer.place);
-	const place = $derived(prayer.timetable ? chosen : null);
+	const place = $derived(prayer.timetable ? picker.place : null);
 	const day = $derived(place ? solarDay(place.lon, view.time) : 0);
 	const timeline = $derived(place ? prayerTimeline(place, day, cfg) : null);
 	const status = $derived(timeline ? currentAndNext(timeline.events, view.time) : null);
@@ -61,99 +51,6 @@
 	const layers = $derived(viewLayers(viewById('prayer'), st.layers));
 	const moon = $derived(sublunarPoint(view.time));
 	const phase = $derived(moonPhase(view.time));
-
-	const round = (n: number) => Math.round(n * 100) / 100;
-
-	/**
-	 * The place a map click picks: a city whose dot (or the Kaaba marker) is
-	 * within a few pixels — so its timetable can show local time — or else the
-	 * point itself.
-	 */
-	function placeAt(p: GeoPoint): PrayerPlace {
-		const at = project(p.lat, p.lon, view.rect);
-		let snap = 12 * st.ui.hudScale;
-		let city = null;
-		for (const c of st.layers.cities ? [MAKKAH, ...CITIES] : [MAKKAH]) {
-			const q = project(c.lat, c.lon, view.rect);
-			const d = Math.hypot(q.x - at.x, q.y - at.y);
-			if (d <= snap) {
-				snap = d;
-				city = c;
-			}
-		}
-		return city
-			? { lat: city.lat, lon: city.lon, name: city.name, tz: city.tz }
-			: { lat: round(p.lat), lon: round(p.lon), name: '' };
-	}
-
-	$effect(() => {
-		if (!prayer.timetable) return;
-		return view.onMapClick((p) => {
-			locateError = '';
-			settings.setPrayer('place', placeAt(p));
-		});
-	});
-
-	let locating = $state(false);
-	let locateError = $state('');
-
-	/** Why the browser gave no location (by GeolocationPositionError code), and what to do. */
-	const LOCATE_ERRORS: Record<number, string> = {
-		1: 'Location is blocked for this page. Allow it in your browser’s site settings, or click your spot on the map.',
-		2: 'Your device couldn’t find its location. Check that Location Services is on for this browser, or click your spot on the map.',
-		3: 'Finding your location took too long. Try again, or click your spot on the map.'
-	};
-
-	async function locate() {
-		locateError = '';
-		if (!('geolocation' in navigator)) {
-			fail('This browser can’t share its location. Click your spot on the map instead.');
-			return;
-		}
-		// Where the answer is already no, asking again would only fail at once.
-		const permission = await navigator.permissions
-			?.query({ name: 'geolocation' })
-			.then((p) => p.state)
-			.catch(() => undefined);
-		if (permission === 'denied') {
-			fail(LOCATE_ERRORS[1]);
-			return;
-		}
-
-		locating = true;
-		// The timeout below only runs once access is granted, so an unanswered
-		// permission prompt would otherwise leave us locating forever. A late
-		// answer still lands.
-		const watchdog = setTimeout(
-			() => fail('Still waiting for permission — answer your browser’s prompt, or click your spot on the map.'),
-			20_000
-		);
-		navigator.geolocation.getCurrentPosition(
-			(pos) => {
-				clearTimeout(watchdog);
-				locating = false;
-				locateError = '';
-				settings.setPrayer('place', {
-					lat: round(pos.coords.latitude),
-					lon: round(pos.coords.longitude),
-					name: 'Your location',
-					tz: localTimeZone()
-				});
-			},
-			(err) => {
-				clearTimeout(watchdog);
-				fail(LOCATE_ERRORS[err.code] ?? LOCATE_ERRORS[2]);
-			},
-			{ maximumAge: 600_000, timeout: 15_000 }
-		);
-	}
-
-	/** Say why, and with nothing pinned, fall back to the time-zone city. */
-	function fail(message: string) {
-		locating = false;
-		locateError = message;
-		if (prayer.place === null) settings.setPrayer('place', undefined);
-	}
 </script>
 
 <svelte:head>
@@ -178,13 +75,10 @@
 		current={status?.current ?? null}
 		next={status?.next ?? null}
 		now={view.time}
-		{locating}
-		{locateError}
-		onlocate={locate}
-		onclear={() => {
-			locateError = '';
-			settings.setPrayer('place', null);
-		}}
+		locating={picker.locating}
+		locateError={picker.locateError}
+		onlocate={picker.locate}
+		onclear={picker.clear}
 	/>
 {/snippet}
 

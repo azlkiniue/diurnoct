@@ -6,11 +6,11 @@
 		type PrayerEvent,
 		type PrayerTimeline
 	} from '$lib/astro/prayer';
-	import type { PrayerPlace } from '$lib/stores/settings.svelte';
+	import type { Place } from '$lib/stores/settings.svelte';
 	import { formatLatLon, formatTime, tzAbbrev } from '$lib/time';
 
 	interface Props {
-		place: PrayerPlace | null;
+		place: Place | null;
 		timeline: PrayerTimeline | null;
 		current: PrayerEvent | null;
 		next: PrayerEvent | null;

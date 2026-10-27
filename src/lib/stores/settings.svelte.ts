@@ -55,8 +55,8 @@ export interface UISettings {
 	hudScale: number;
 }
 
-/** A place whose timetable the prayer view shows. */
-export interface PrayerPlace {
+/** The place whose times the Prayer and Moon views show. */
+export interface Place {
 	lat: number;
 	lon: number;
 	/** City name, "Your location", or empty for a point picked on the map. */
@@ -78,8 +78,11 @@ export interface PrayerSettings {
 	legend: boolean;
 	/** The pinned place's timetable panel. */
 	timetable: boolean;
-	/** Unset until the viewer picks one — meanwhile, their time zone's city; null once cleared. */
-	place?: PrayerPlace | null;
+}
+
+/** Where versions before the shared pinned place kept it. */
+interface LegacyPrayerSettings extends Partial<PrayerSettings> {
+	place?: unknown;
 }
 
 export interface Settings {
@@ -90,6 +93,12 @@ export interface Settings {
 	texture: TextureSettings;
 	ui: UISettings;
 	prayer: PrayerSettings;
+	/**
+	 * The pinned place, shared by every view that shows times for one. Unset
+	 * until the viewer picks one — meanwhile, their time zone's city; null once
+	 * cleared.
+	 */
+	place?: Place | null;
 }
 
 export const LAYER_META: { key: LayerKey; label: string; hint: string }[] = [
@@ -197,16 +206,27 @@ function merge(base: Settings, saved: unknown): Settings {
 		time: { ...base.time, ...(s.time as Partial<TimeSettings>) },
 		texture: { ...base.texture, ...(s.texture as Partial<TextureSettings>) },
 		ui: { ...base.ui, ...(s.ui as Partial<UISettings>) },
-		prayer: mergePrayer(base.prayer, s.prayer)
+		prayer: mergePrayer(base.prayer, s.prayer),
+		place: mergePlace(s)
 	};
 }
 
 function mergePrayer(base: PrayerSettings, saved: unknown): PrayerSettings {
-	const p = { ...base, ...(saved as Partial<PrayerSettings>) };
+	// The pinned place has moved out (see mergePlace).
+	const { place: _moved, ...rest } = (saved ?? {}) as LegacyPrayerSettings;
+	const p = { ...base, ...rest };
 	// Drop ids a newer or older version doesn't know.
 	if (!METHODS.some((m) => m.id === p.method)) p.method = base.method;
 	if (!HIGH_LAT_RULES.some((r) => r.id === p.highLat)) p.highLat = base.highLat;
 	return p;
+}
+
+/** The pinned place, moved across from the prayer settings where older versions kept it. */
+function mergePlace(s: Record<string, unknown>): Place | null | undefined {
+	const saved = 'place' in s ? s.place : (s.prayer as LegacyPrayerSettings | undefined)?.place;
+	if (saved === null) return null;
+	const p = saved as Place | undefined;
+	return p && Number.isFinite(p.lat) && Number.isFinite(p.lon) ? p : undefined;
 }
 
 function load(): Settings {
@@ -272,6 +292,10 @@ class SettingsStore {
 
 	setPrayer<K extends keyof PrayerSettings>(key: K, value: PrayerSettings[K]) {
 		this.current.prayer[key] = value;
+	}
+
+	setPlace(place: Place | null | undefined) {
+		this.current.place = place;
 	}
 
 	reset() {
