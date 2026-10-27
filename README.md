@@ -24,7 +24,8 @@ information can be toggled on or off to taste.
   [`docs/prayer-times.md`](docs/prayer-times.md).
 - 🌙 **Moon view** _(optional)_ — turn it on in **Settings → Moon** for a
   view (`/moon/`, or press `M`) of where the moon is rising, highest in the
-  sky and setting right now, from the full Meeus lunar series. Methodology,
+  sky and setting right now, with the moonlit night — moon up, sun down —
+  shaded by how full the moon is, from the full Meeus lunar series. Methodology,
   sources and accuracy checks are in [`docs/moon.md`](docs/moon.md).
 - 🎚️ **Adjustable verbosity** — three presets (Minimal / Standard / Detailed)
   plus individual toggles for clocks, date, sun & moon markers, the terminator

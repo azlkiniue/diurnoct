@@ -310,6 +310,21 @@
 			</div>
 
 			{#if s.current.moon.enabled && view === 'moon'}
+				<div class="-mx-2">
+					{@render toggleRow(
+						'Line labels',
+						'Moonrise, transit and moonset along the lines',
+						s.current.moon.labels,
+						() => s.setMoon('labels', !s.current.moon.labels)
+					)}
+					{@render toggleRow(
+						'Legend',
+						'The lines, the moonlit night and today’s phase',
+						s.current.moon.legend,
+						() => s.setMoon('legend', !s.current.moon.legend)
+					)}
+				</div>
+
 				<a
 					href={MOON_DOCS_URL}
 					target="_blank"

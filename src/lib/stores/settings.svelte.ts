@@ -83,6 +83,9 @@ export interface PrayerSettings {
 export interface MoonSettings {
 	/** Offer the Moon view (toolbar switch, M). Off until turned on in settings. */
 	enabled: boolean;
+	/** Event names along the lines. */
+	labels: boolean;
+	legend: boolean;
 }
 
 /** Where versions before the shared pinned place kept it. */
@@ -199,7 +202,9 @@ function defaults(): Settings {
 			timetable: true
 		},
 		moon: {
-			enabled: false
+			enabled: false,
+			labels: true,
+			legend: true
 		}
 	};
 }

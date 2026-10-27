@@ -13,6 +13,12 @@ map:
 | moon transit | at its highest right now, crossing the meridian |
 | moonset | setting right now |
 
+Between the moonrise and moonset lines, where the moon is up **and** the sun
+is down — the **moonlit night** — the map is lightly shaded, more strongly
+the more of the moon is lit: it all but vanishes at new moon and is clearest
+at full moon. Labels along the lines and a legend with today's phase can each
+be turned off under **Settings → Moon**.
+
 It's optional and off by default: turn it on under **Settings → Moon**, and
 the toolbar's view switch gains a *Moon* entry. As the Earth turns, the lines
 sweep westward at about 14.5° an hour — a little slower than the sun's 15°,
@@ -111,6 +117,19 @@ whatever the time of day, so the lines simply stop rather than inventing
 events that don't happen; the transit line reaches the pole on the side where
 the moon stays up, and stops on the other where it can't be seen.
 
+### The moonlit night
+
+The moon is up inside that circle; the sun is down beyond the terminator,
+the great circle 90° from the point under the sun (the same one the Day &
+night view draws). The moonlit night is where the two overlap, outlined by
+the arc of the moon's circle on the night side and the arc of the terminator
+inside the moon's circle, which meet where the two circles cross. The circles
+fail to cross only in the middle of a deep eclipse: the moon's circle then
+lies wholly on the night side (lunar) or wholly on the day side (solar).
+
+The shading's opacity is proportional to the moon's lit fraction (Meeus 48.4),
+so it tracks how much light the moon actually gives.
+
 ## Accuracy
 
 `bun run verify-moon` checks the engine against independent references.
@@ -142,6 +161,12 @@ lowered 34′ by refraction): each must have that event at that instant.
 | rise and set lines drawn where the moon doesn't rise or set | none | none |
 | ends of the rise and set lines vs the edges of the always-up and always-down caps | 0.002° | 0.02° |
 | transit line vs where the moon is up as it crosses | exact | 0.2° |
+| moonlit night vs where astronomy-engine has the moon up and the sun down, every 5° | worst 0.001° of altitude from an edge | 0.1° |
+| lit fraction used for the shading | 0.28 percentage points | 1 percentage point |
+
+The instants include the middles of a near-central solar eclipse (22 July
+2009) and lunar eclipse (26 June 2029), when the moon's circle and the
+terminator don't cross.
 
 Close to the ends of the rise and set lines the moon only grazes the horizon:
 its altitude barely changes for hours, so an arc-second's difference moves

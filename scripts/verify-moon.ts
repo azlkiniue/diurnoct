@@ -13,7 +13,8 @@
  *      own moonrise, transit and moonset searches: every place on a line at an
  *      instant must have that event at that instant. The rise and set lines
  *      must stop where the moon stays up or down, and the transit line where
- *      it's below the horizon as it crosses.
+ *      it's below the horizon as it crosses. The moonlit night must cover
+ *      just the places where astronomy-engine has the moon up and the sun down.
  *
  * Usage:  bun run verify-moon
  */
@@ -54,6 +55,10 @@ for (let t = Date.UTC(2026, 9, 1, 3); t < Date.UTC(2026, 9, 31); t += 79 * HOUR)
 for (const iso of ['2026-01-15T11:00:00Z', '2026-04-03T20:30:00Z', '2026-06-21T07:45:00Z', '2026-12-24T16:20:00Z']) {
 	INSTANTS.push(new Date(iso));
 }
+// Only near the middle of an eclipse do the moon's circle and the terminator
+// not cross: the moonlit night is then empty (solar, 22 July 2009) or the whole
+// circle (lunar, 26 June 2029).
+INSTANTS.push(new Date('2009-07-22T02:35:00Z'), new Date('2029-06-26T03:21:00Z'));
 
 // ---- bookkeeping ----------------------------------------------------------------
 
@@ -151,12 +156,44 @@ function theirEvent(kind: MoonEventKind, p: GeoPoint, t: Date): number {
 	return Math.abs(diff) <= 180 ? diff : NaN;
 }
 
-/** astronomy-engine: whether the moon's upper limb is above the refracted horizon at `p`. */
-function theyHaveMoonUp(p: GeoPoint, t: Date): boolean {
+/** astronomy-engine: how far the moon's upper limb is above the refracted horizon at `p`, degrees. */
+function theirMoonHeight(p: GeoPoint, t: Date): number {
 	const observer = new Observer(p.lat, wrapLon(p.lon), 0);
 	const eq = Equator(Body.Moon, t, observer, true, true);
 	const limb = Math.asin(MOON_RADIUS_KM / (eq.dist * KM_PER_AU)) / RAD;
-	return Horizon(t, observer, eq.ra, eq.dec).altitude + limb > -34 / 60;
+	return Horizon(t, observer, eq.ra, eq.dec).altitude + limb + 34 / 60;
+}
+
+function theyHaveMoonUp(p: GeoPoint, t: Date): boolean {
+	return theirMoonHeight(p, t) > 0;
+}
+
+/** astronomy-engine: the sun's centre's geometric altitude at `p`, degrees — negative on the night side of the terminator. */
+function theirSunAltitude(p: GeoPoint, t: Date): number {
+	const observer = new Observer(p.lat, wrapLon(p.lon), 0);
+	const eq = Equator(Body.Sun, t, observer, true, true);
+	return Horizon(t, observer, eq.ra, eq.dec).altitude;
+}
+
+/**
+ * Whether `p` lies inside the closed outlines `rings` (longitudes continuous,
+ * so each is tried a world to either side as well), by counting crossings.
+ */
+function insideOutline(rings: GeoPoint[][], p: GeoPoint): boolean {
+	let inside = false;
+	for (const ring of rings) {
+		for (const shift of [-360, 0, 360]) {
+			const lon = p.lon + shift;
+			for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+				const a = ring[i];
+				const b = ring[j];
+				if (a.lat > p.lat !== b.lat > p.lat && lon < a.lon + ((p.lat - a.lat) / (b.lat - a.lat)) * (b.lon - a.lon)) {
+					inside = !inside;
+				}
+			}
+		}
+	}
+	return inside;
 }
 
 /**
@@ -179,6 +216,10 @@ const linesVsThemPolar = check('… beyond 66°, reported', Infinity, minutes);
 const noInventedEvents = check('No rise or set line where the moon stays up or down', 0, () => 'none missing');
 const lineEnds = check('Rise and set lines end at the edges of the always-up and always-down caps', 0.02, degrees(4));
 const transitExtent = check('Transit line drawn just where the moon is up as it crosses', 0.2, degrees(2));
+// A place may land on the wrong side only within a hair of either edge: its
+// distance from the nearer one, in degrees of altitude.
+const moonlitArea = check('Moonlit night covers just where the moon is up and the sun down', 0.1, degrees(3));
+const moonlitLit = check('Moonlit night shading follows the lit fraction', 0.01, (n) => `${(n * 100).toFixed(2)} points`);
 
 for (const t of INSTANTS) {
 	const lines = moonLines(t);
@@ -218,6 +259,19 @@ for (const t of INSTANTS) {
 		const fromEnd = Math.min(...drawn.flat().map((end) => Math.abs(lat - end)));
 		transitExtent(shown === up ? 0 : fromEnd, `${at} transit at ${lat}°`);
 	}
+
+	// Every 5° over the globe: moonlit exactly where the moon is up and the sun down.
+	for (let lat = -87.5; lat < 90; lat += 5) {
+		for (let lon = -177.5; lon < 180; lon += 5) {
+			const p = { lat, lon };
+			const moon = theirMoonHeight(p, t);
+			const sun = theirSunAltitude(p, t);
+			const shaded = insideOutline(lines.moonlit, p);
+			const lit = moon > 0 && sun < 0;
+			moonlitArea(shaded === lit ? 0 : Math.min(Math.abs(moon), Math.abs(sun)), `${at} at ${lat}°, ${lon}°`);
+		}
+	}
+	moonlitLit(lines.illumination - Illumination(Body.Moon, t).phase_fraction, at);
 }
 
 // ---- report ---------------------------------------------------------------------------------

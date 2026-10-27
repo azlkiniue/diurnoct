@@ -8,13 +8,16 @@
 
 	import MapOverlay from '$lib/components/MapOverlay.svelte';
 	import MoonOverlay from '$lib/components/MoonOverlay.svelte';
+	import MoonLegend from '$lib/components/MoonLegend.svelte';
 	import Hud from '$lib/components/Hud.svelte';
 
 	// The map, clock and controls live in the layout; this view adds the lines
-	// where the moon is rising, highest and setting right now.
+	// where the moon is rising, highest and setting right now, and where it
+	// lights the night.
 	const view = getMapView();
 
 	const st = $derived(settings.current);
+	const moonSt = $derived(st.moon);
 	const lines = $derived(moonLines(view.time));
 
 	const layers = $derived(viewLayers(viewById('moon'), st.layers));
@@ -30,12 +33,18 @@
 	/>
 </svelte:head>
 
+{#snippet legend()}
+	<MoonLegend {phase} />
+{/snippet}
+
 {#if view.width > 0 && view.height > 0}
 	<MoonOverlay
 		rect={view.rect}
 		width={view.width}
 		height={view.height}
 		{lines}
+		moonLat={moon.lat}
+		labels={moonSt.labels}
 		scale={st.ui.hudScale}
 	/>
 	<MapOverlay
@@ -62,5 +71,6 @@
 		scale={st.ui.hudScale}
 		customTime={st.time.mode === 'custom'}
 		tagline="moonrise, transit & moonset"
+		legend={moonSt.legend ? legend : undefined}
 	/>
 {/if}

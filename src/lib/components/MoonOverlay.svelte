@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { MOON_EVENT_KINDS, type MoonLines } from '$lib/astro/moon';
+	import { wrapLon, type GeoPoint } from '$lib/astro/solar';
+	import {
+		MOON_EVENT_KINDS,
+		MOON_EVENT_NAMES,
+		type MoonEventKind,
+		type MoonLines
+	} from '$lib/astro/moon';
 	import { project, type Rect } from '$lib/map/projection';
 
 	interface Props {
@@ -7,28 +13,53 @@
 		width: number;
 		height: number;
 		lines: MoonLines;
+		/** Latitude of the point under the moon, to keep the transit label clear of its marker. */
+		moonLat: number;
+		labels: boolean;
 		scale: number;
 	}
 
-	let { rect, width, height, lines, scale }: Props = $props();
+	let { rect, width, height, lines, moonLat, labels, scale }: Props = $props();
 
 	const uid = $props.id();
 	const r = (n: number) => n * scale;
 
 	// Longitudes are unwrapped, so paths run off the map's edges; the markup draws
 	// each one again a world to the left and right, clipped to the map.
+	const path = (points: GeoPoint[]) =>
+		points
+			.map((p, i) => {
+				const { x, y } = project(p.lat, p.lon, rect);
+				return `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
+			})
+			.join('');
+
 	const paths = $derived(
-		MOON_EVENT_KINDS.flatMap((kind) =>
-			lines[kind].map((line) => ({
-				kind,
-				d: line
-					.map((p, i) => {
-						const { x, y } = project(p.lat, p.lon, rect);
-						return `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
-					})
-					.join('')
-			}))
-		)
+		MOON_EVENT_KINDS.flatMap((kind) => lines[kind].map((line) => ({ kind, d: path(line) })))
+	);
+	const moonlit = $derived(lines.moonlit.map((ring) => `${path(ring)}Z`));
+	// Faint near new moon, clearest at full.
+	const moonlitOpacity = $derived(0.22 * lines.illumination);
+
+	// Labels sit where each line crosses a chosen latitude; the transit line's
+	// goes in the hemisphere away from the moon marker.
+	function labelAt(kind: MoonEventKind) {
+		const target = kind === 'transit' ? (moonLat > 0 ? -38 : 38) : 8;
+		let best: GeoPoint | null = null;
+		for (const line of lines[kind]) {
+			for (const p of line) {
+				if (!best || Math.abs(p.lat - target) < Math.abs(best.lat - target)) best = p;
+			}
+		}
+		if (!best) return null;
+		const at = project(best.lat, wrapLon(best.lon), rect);
+		// Flip to the line's left when the label would run off the map.
+		const flip = at.x + r(80) > rect.left + rect.width;
+		return { kind, x: at.x + (flip ? -r(6) : r(6)), y: at.y - r(4), flip };
+	}
+
+	const labelPts = $derived(
+		labels ? MOON_EVENT_KINDS.map(labelAt).filter((l) => l !== null) : []
 	);
 </script>
 
@@ -48,6 +79,10 @@
 	<g clip-path={`url(#map-${uid})`} stroke-linecap="round" stroke-linejoin="round">
 		{#each [-1, 0, 1] as shift (shift)}
 			<g transform={`translate(${shift * rect.width} 0)`}>
+				<!-- The moonlit night: the moon up and the sun down. -->
+				{#each moonlit as d, i (i)}
+					<path {d} fill="var(--color-moon)" fill-opacity={moonlitOpacity} />
+				{/each}
 				<!-- A dark casing keeps every line legible over bright desert and ice. -->
 				{#each paths as p, i (i)}
 					<path d={p.d} stroke="rgb(3 6 14 / 0.6)" stroke-width={r(4.5)} />
@@ -58,4 +93,18 @@
 			</g>
 		{/each}
 	</g>
+
+	{#if labels}
+		<g
+			font-size={r(11)}
+			font-weight="600"
+			style={`paint-order: stroke; stroke: var(--color-space); stroke-width: ${r(3)}px; stroke-linejoin: round;`}
+		>
+			{#each labelPts as l (l.kind)}
+				<text x={l.x} y={l.y} fill={`var(--color-${l.kind})`} text-anchor={l.flip ? 'end' : 'start'}>
+					{MOON_EVENT_NAMES[l.kind]}
+				</text>
+			{/each}
+		</g>
+	{/if}
 </svg>
