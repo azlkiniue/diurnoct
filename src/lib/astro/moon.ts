@@ -15,7 +15,8 @@
  *     the half to its east setting;
  *   - the transit line is its meridian, as far as the moon stands above h₀.
  * Where that circle's cap overlaps the night side of the sun's terminator, the
- * moon is up and the sun down: the moonlit night.
+ * moon is up and the sun down: the moonlit night. Where it overlaps the day
+ * side, the moon is up by day.
  *
  * Positions come from ./lunar (Meeus ch. 47). See docs/moon.md.
  */
@@ -74,6 +75,8 @@ export interface MoonLines extends Record<MoonEventKind, MoonLine[]> {
 	 * near new moon, when the moon is only up by day.
 	 */
 	moonlit: GeoPoint[][];
+	/** Outline of the rest of the moon's circle, where it's up and the sun is too; drawn as `moonlit`. */
+	moonByDay: GeoPoint[][];
 	/** Lit fraction of the moon's disk, 0..1: how bright the moonlit night is. */
 	illumination: number;
 }
@@ -91,11 +94,13 @@ const MAX_LON_STEP = 1.5;
  */
 export function moonLines(date: Date): MoonLines {
 	const c = moonCircle(date);
+	const sun = geoToVec3(sunState(date).subsolar);
 	return {
 		moonrise: [circleHalf(c, -1)],
 		transit: transitLine(c),
 		moonset: [circleHalf(c, 1)],
-		moonlit: moonlitNight(c, sunState(date).subsolar),
+		moonlit: moonUpIn(c, { centre: times(sun, -1), cos: 0 }),
+		moonByDay: moonUpIn(c, { centre: sun, cos: 0 }),
 		illumination: moonPhase(date).illumination
 	};
 }
@@ -161,7 +166,7 @@ function transitLine(c: MoonCircle): MoonLine[] {
 	return [lats.map((lat) => ({ lat, lon: c.lon }))];
 }
 
-// ---- the moonlit night --------------------------------------------------------------------
+// ---- the moonlit night, and the moon by day ---------------------------------------------------
 
 type Vec = [number, number, number];
 
@@ -209,26 +214,28 @@ function edge(cap: Cap, from: Vec, to: Vec, other: Cap): GeoPoint[] {
 	return trace((deg) => vec3ToGeo(at(deg)), 0, sweep);
 }
 
-/** Where the moon is up (`moon`, its circle of rise and set) and the sun down. */
-function moonlitNight(moon: MoonCircle, sun: GeoPoint): GeoPoint[][] {
+/**
+ * Where the moon is up (`moon`, its circle of rise and set) within `half`, the
+ * night or the day side of the terminator.
+ */
+function moonUpIn(moon: MoonCircle, half: Cap): GeoPoint[][] {
 	const up: Cap = { centre: geoToVec3(moon), cos: Math.cos(moon.radius * RAD) };
-	const night: Cap = { centre: times(geoToVec3(sun), -1), cos: 0 };
 
 	let ring: GeoPoint[];
-	const ends = crossings(up, night);
+	const ends = crossings(up, half);
 	if (ends) {
-		// Round the moon's circle on the night side, then back along the terminator.
+		// Round the moon's circle inside the half, then back along the terminator.
 		const [a, b] = ends;
-		ring = [...edge(up, a, b, night), ...edge(night, b, a, up).slice(1, -1)];
+		ring = [...edge(up, a, b, half), ...edge(half, b, a, up).slice(1, -1)];
 	} else {
 		// The circle and the terminator don't cross, and the moon's cap is the
 		// smaller (h₀ > 0): it's wholly on the night side near full moon, or
 		// wholly on the day side near new moon.
 		const somewhere = plus(times(up.centre, up.cos), times(unit(cross(up.centre, [0, 1, 0.5])), Math.sqrt(1 - up.cos ** 2)));
-		if (!inCap(night, somewhere)) return [];
-		ring = edge(up, somewhere, somewhere, night).slice(0, -1);
+		if (!inCap(half, somewhere)) return [];
+		ring = edge(up, somewhere, somewhere, half).slice(0, -1);
 	}
-	return [outline(ring, (p) => inCap(up, p) && inCap(night, p))];
+	return [outline(ring, (p) => inCap(up, p) && inCap(half, p))];
 }
 
 /**

@@ -16,7 +16,8 @@ map:
 Between the moonrise and moonset lines, where the moon is up **and** the sun
 is down — the **moonlit night** — the map is lightly shaded, more strongly
 the more of the moon is lit: it all but vanishes at new moon and is clearest
-at full moon. Labels along the lines and a legend with today's phase can each
+at full moon. Where the moon is up by day, a fainter haze marks it at any
+phase. Labels along the lines and a legend with today's phase can each
 be turned off under **Settings → Moon**.
 
 A **moon panel** gives one place's moonrise, transit and moonset today,
@@ -126,18 +127,23 @@ whatever the time of day, so the lines simply stop rather than inventing
 events that don't happen; the transit line reaches the pole on the side where
 the moon stays up, and stops on the other where it can't be seen.
 
-### The moonlit night
+### The moonlit night, and the moon by day
 
 The moon is up inside that circle; the sun is down beyond the terminator,
 the great circle 90° from the point under the sun (the same one the Day &
 night view draws). The moonlit night is where the two overlap, outlined by
 the arc of the moon's circle on the night side and the arc of the terminator
-inside the moon's circle, which meet where the two circles cross. The circles
-fail to cross only in the middle of a deep eclipse: the moon's circle then
-lies wholly on the night side (lunar) or wholly on the day side (solar).
+inside the moon's circle, which meet where the two circles cross. The rest of
+the moon's circle, on the day side, is the moon by day, outlined the same way.
+The circles fail to cross only in the middle of a deep eclipse: the moon's
+circle then lies wholly on the night side (lunar) or wholly on the day side
+(solar).
 
-The shading's opacity is proportional to the moon's lit fraction (Meeus 48.4),
-so it tracks how much light the moon actually gives.
+The moonlit night's opacity is proportional to the moon's lit fraction
+(Meeus 48.4), so it tracks how much light the moon actually gives, up to 22%
+at full moon. By day sunlight swamps the moon's, so the moon by day is a fixed
+12% haze that only marks where the moon is up: weaker than a full moon's
+night, and still there near new moon, when the moon is up mostly by day.
 
 ## The moon panel's times
 
@@ -207,6 +213,7 @@ lowered 34′ by refraction): each must have that event at that instant.
 | ends of the rise and set lines vs the edges of the always-up and always-down caps | 0.002° | 0.02° |
 | transit line vs where the moon is up as it crosses | exact | 0.2° |
 | moonlit night vs where astronomy-engine has the moon up and the sun down, every 5° | worst 0.001° of altitude from an edge | 0.1° |
+| moon by day vs where astronomy-engine has the moon and the sun both up, every 5° | worst 0.001° of altitude from an edge | 0.1° |
 | lit fraction used for the shading | 0.28 percentage points | 1 percentage point |
 
 The instants include the middles of a near-central solar eclipse (22 July

@@ -29,9 +29,13 @@
 			lines[kind].map((points) => ({ points, color: `var(--color-${kind})` }))
 		)
 	);
-	const moonlit = $derived(lines.moonlit.map((ring) => `${linePath(ring, rect)}Z`));
-	// Faint near new moon, clearest at full.
-	const moonlitOpacity = $derived(0.22 * lines.illumination);
+	const area = (rings: GeoPoint[][]) => rings.map((ring) => `${linePath(ring, rect)}Z`);
+	const moonlit = $derived(area(lines.moonlit));
+	const moonByDay = $derived(area(lines.moonByDay));
+	// Faint near new moon, clearest at full. By day sunlight swamps the moon's,
+	// so there it's a faint haze at any phase, just marking where it's up.
+	const moonlitOpacity = $derived(0.29 * lines.illumination);
+	const BY_DAY_OPACITY = 0.17;
 
 	// Labels sit where each line crosses a chosen latitude; the transit line's
 	// goes in the hemisphere away from the moon marker.
@@ -56,6 +60,10 @@
 		<!-- The moonlit night: the moon up and the sun down. -->
 		{#each moonlit as d, i (i)}
 			<path {d} fill="var(--color-moon)" fill-opacity={moonlitOpacity} />
+		{/each}
+		<!-- The moon up by day. -->
+		{#each moonByDay as d, i (i)}
+			<path {d} fill="var(--color-moon)" fill-opacity={BY_DAY_OPACITY} />
 		{/each}
 	{/snippet}
 </LineOverlay>

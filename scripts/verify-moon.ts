@@ -14,7 +14,8 @@
  *      instant must have that event at that instant. The rise and set lines
  *      must stop where the moon stays up or down, and the transit line where
  *      it's below the horizon as it crosses. The moonlit night must cover
- *      just the places where astronomy-engine has the moon up and the sun down.
+ *      just the places where astronomy-engine has the moon up and the sun down,
+ *      and the moon by day just those where it has both up.
  *   4. The moon panel's timeline against astronomy-engine: each day's moonrise,
  *      transit and moonset for 17 cities from the equator to the Arctic, a day
  *      missing an event exactly when it finds none, and moon up or down all
@@ -72,7 +73,7 @@ for (const iso of ['2026-01-15T11:00:00Z', '2026-04-03T20:30:00Z', '2026-06-21T0
 }
 // Only near the middle of an eclipse do the moon's circle and the terminator
 // not cross: the moonlit night is then empty (solar, 22 July 2009) or the whole
-// circle (lunar, 26 June 2029).
+// circle (lunar, 26 June 2029), and the moon by day the other way round.
 INSTANTS.push(new Date('2009-07-22T02:35:00Z'), new Date('2029-06-26T03:21:00Z'));
 
 // ---- bookkeeping ----------------------------------------------------------------
@@ -235,6 +236,7 @@ const transitExtent = check('Transit line drawn just where the moon is up as it 
 // A place may land on the wrong side only within a hair of either edge: its
 // distance from the nearer one, in degrees of altitude.
 const moonlitArea = check('Moonlit night covers just where the moon is up and the sun down', 0.1, degrees(3));
+const byDayArea = check('Moon by day covers just where the moon and the sun are both up', 0.1, degrees(3));
 const moonlitLit = check('Moonlit night shading follows the lit fraction', 0.01, (n) => `${(n * 100).toFixed(2)} points`);
 
 for (const t of INSTANTS) {
@@ -276,15 +278,19 @@ for (const t of INSTANTS) {
 		transitExtent(shown === up ? 0 : fromEnd, `${at} transit at ${lat}°`);
 	}
 
-	// Every 5° over the globe: moonlit exactly where the moon is up and the sun down.
+	// Every 5° over the globe: moonlit exactly where the moon is up and the sun
+	// down, and the moon by day where both are up.
 	for (let lat = -87.5; lat < 90; lat += 5) {
 		for (let lon = -177.5; lon < 180; lon += 5) {
 			const p = { lat, lon };
 			const moon = theirMoonHeight(p, t);
 			const sun = theirSunAltitude(p, t);
-			const shaded = insideOutline(lines.moonlit, p);
+			const fromEdge = Math.min(Math.abs(moon), Math.abs(sun));
+			const label = `${at} at ${lat}°, ${lon}°`;
 			const lit = moon > 0 && sun < 0;
-			moonlitArea(shaded === lit ? 0 : Math.min(Math.abs(moon), Math.abs(sun)), `${at} at ${lat}°, ${lon}°`);
+			moonlitArea(insideOutline(lines.moonlit, p) === lit ? 0 : fromEdge, label);
+			const byDay = moon > 0 && sun > 0;
+			byDayArea(insideOutline(lines.moonByDay, p) === byDay ? 0 : fromEdge, label);
 		}
 	}
 	moonlitLit(lines.illumination - Illumination(Body.Moon, t).phase_fraction, at);

@@ -25,7 +25,7 @@ information can be toggled on or off to taste.
 - 🌙 **Moon view** _(optional)_ — turn it on in **Settings → Moon** for a
   view (`/moon/`, or press `M`) of where the moon is rising, highest in the
   sky and setting right now, with the moonlit night — moon up, sun down —
-  shaded by how full the moon is, from the full Meeus lunar series. Pin a
+  shaded by how full the moon is and a fainter haze where it's up by day, from the full Meeus lunar series. Pin a
   place — the same one as the prayer view — for its moonrise, transit and
   moonset today, and the next new and full moon. Methodology,
   sources and accuracy checks are in [`docs/moon.md`](docs/moon.md).
