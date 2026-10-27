@@ -7,9 +7,9 @@
 		methodById,
 		prayerLines,
 		prayerTimeline,
-		solarDay,
 		type PrayerConfig
 	} from '$lib/astro/prayer';
+	import { solarDay } from '$lib/astro/solar';
 	import { APP_NAME } from '$lib/config';
 	import { getMapView } from '$lib/map/view';
 	import { placePicker } from '$lib/map/place.svelte';

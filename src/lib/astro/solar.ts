@@ -35,6 +35,15 @@ export function wrapLon(lon: number): number {
 	return ((((lon + 180) % 360) + 360) % 360) - 180;
 }
 
+/**
+ * Number of the local mean-solar day at longitude `lon` that contains `at`:
+ * days since 1970 on a clock running at that meridian's mean solar time —
+ * the day of a place's timetable, midnight to midnight, with no time zone.
+ */
+export function solarDay(lon: number, at: Date): number {
+	return Math.floor((at.getTime() + (lon / 15) * 3_600_000) / 86_400_000);
+}
+
 /** Greenwich Mean Sidereal Time, in degrees. */
 export function gmstDeg(date: Date): number {
 	const n = daysSinceJ2000(date);

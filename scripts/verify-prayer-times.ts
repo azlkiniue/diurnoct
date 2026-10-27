@@ -26,13 +26,12 @@ import {
 	PrayerTimes,
 	Rounding
 } from 'adhan';
-import { sunState, wrapLon } from '../src/lib/astro/solar';
+import { solarDay, sunState, wrapLon } from '../src/lib/astro/solar';
 import {
 	PRAYER_KEYS,
 	isRamadan,
 	prayerLines,
 	prayerTimes,
-	solarDay,
 	type HighLatRule,
 	type MethodId,
 	type PrayerConfig,

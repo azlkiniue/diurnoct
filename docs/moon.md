@@ -19,6 +19,14 @@ the more of the moon is lit: it all but vanishes at new moon and is clearest
 at full moon. Labels along the lines and a legend with today's phase can each
 be turned off under **Settings → Moon**.
 
+A **moon panel** gives one place's moonrise, transit and moonset today,
+whether the moon is up now and when it next rises or sets, and its phase. It
+starts at the principal city of your device's time zone, marked *from your
+time zone* since it's only approximate; click the map (a city dot picks that
+city and shows its local time) or use *Use my location* to pin your spot.
+It's **the same pinned place** as in the Prayer times view, so you pin your
+home once. Nothing leaves your device.
+
 It's optional and off by default: turn it on under **Settings → Moon**, and
 the toolbar's view switch gains a *Moon* entry. As the Earth turns, the lines
 sweep westward at about 14.5° an hour — a little slower than the sun's 15°,
@@ -130,6 +138,32 @@ lies wholly on the night side (lunar) or wholly on the day side (solar).
 The shading's opacity is proportional to the moon's lit fraction (Meeus 48.4),
 so it tracks how much light the moon actually gives.
 
+## The moon panel's times
+
+**The day** is the place's local mean-solar day, midnight to midnight at its
+meridian — the same day the prayer timetable uses, so "today" means the same
+in both views and no time zone is needed. Times are shown to the nearest
+minute, in the place's local time when it's a city (otherwise in yours).
+
+**Each time** is the instant the same condition that draws the lines holds at
+the place, with the same moon position and parallax: its altitude crosses h₀
+(rise or set), or its hour angle passes 0° with the moon above h₀ (transit).
+So a place lies on a line exactly when its panel says that event is happening.
+Between one culmination and the next the moon mostly only climbs or only
+sinks, so the culminations bracket each rise and set — the bracketing
+astronomy-engine uses too — and each stretch is also sampled every two hours,
+since near the poles the moon's changing declination moves it as much as
+Earth's turn does.
+
+**Missing times are normal.** The moon rises about 50 minutes later each day,
+so roughly once a month a day has no moonrise — it rose just before midnight
+and rises again just after the next — and likewise no moonset, or no transit.
+The panel says so ("no moonrise today") rather than showing a time from
+another day. At high latitudes the moon can stay up or stay down for days, as
+the sun does around the solstices; the panel then says "moon up all day" or
+"moon down all day". Unlike the prayer view's high-latitude rules, nothing is
+estimated: a time is shown only when the event happens.
+
 ## Accuracy
 
 `bun run verify-moon` checks the engine against independent references.
@@ -167,6 +201,23 @@ lowered 34′ by refraction): each must have that event at that instant.
 The instants include the middles of a near-central solar eclipse (22 July
 2009) and lunar eclipse (26 June 2029), when the moon's circle and the
 terminator don't cross.
+
+**The panel's times.** For 17 cities from near the equator (Jakarta) to the
+high Arctic (Longyearbyen, 78° N) — the prayer-times check's 16, plus
+Longyearbyen — on every other day
+of October 2026 and four more days through the year, against
+astronomy-engine's moonrise, moonset and transit in the same local day:
+
+| Check | Result | Limit |
+| ----- | -----: | ----: |
+| moonrise, transit and moonset, up to 60° latitude | worst 6 s | 2 min |
+| the same, beyond 60° (reported) | median 1 s, worst 7 s | — |
+| a day misses an event exactly when astronomy-engine finds none | always | always |
+| moon up or down all day, as astronomy-engine has it | always | always |
+| the map against the panel: points on the lines have that event at that instant | worst 0.0 s | 5 s |
+
+An event within two minutes of midnight may fairly fall on either day, so a
+disagreement there doesn't count as a missing event.
 
 Close to the ends of the rise and set lines the moon only grazes the horizon:
 its altitude barely changes for hours, so an arc-second's difference moves

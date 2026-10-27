@@ -25,7 +25,9 @@ information can be toggled on or off to taste.
 - 🌙 **Moon view** _(optional)_ — turn it on in **Settings → Moon** for a
   view (`/moon/`, or press `M`) of where the moon is rising, highest in the
   sky and setting right now, with the moonlit night — moon up, sun down —
-  shaded by how full the moon is, from the full Meeus lunar series. Methodology,
+  shaded by how full the moon is, from the full Meeus lunar series. Pin a
+  place — the same one as the prayer view — for its moonrise, transit and
+  moonset today. Methodology,
   sources and accuracy checks are in [`docs/moon.md`](docs/moon.md).
 - 🎚️ **Adjustable verbosity** — three presets (Minimal / Standard / Detailed)
   plus individual toggles for clocks, date, sun & moon markers, the terminator
@@ -86,7 +88,8 @@ DAY_URL="https://…/blue_marble_8k.jpg" NIGHT_URL="https://…/black_marble_8k.
 ¹ Once that view is turned on in settings.
 
 The toolbar (top center) exposes the same actions and auto-hides when idle.
-On the prayer-times view, click the map to pin a place for its timetable.
+On the prayer-times and Moon views, click the map to pin a place for its
+times; both views share it.
 
 ## Build
 

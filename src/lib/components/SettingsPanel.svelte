@@ -323,6 +323,12 @@
 						s.current.moon.legend,
 						() => s.setMoon('legend', !s.current.moon.legend)
 					)}
+					{@render toggleRow(
+						'Moon panel',
+						'Moon times for a place you pick on the map',
+						s.current.moon.panel,
+						() => s.setMoon('panel', !s.current.moon.panel)
+					)}
 				</div>
 
 				<a

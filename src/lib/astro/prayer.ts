@@ -607,15 +607,7 @@ function solveTime(
 }
 
 /**
- * Number of the local mean-solar day at longitude `lon` that contains `at`:
- * days since 1970 on a clock running at that meridian's mean solar time.
- */
-export function solarDay(lon: number, at: Date): number {
-	return Math.floor((at.getTime() + (lon / 15) * HOUR_MS) / DAY_MS);
-}
-
-/**
- * Prayer times at `place` on its solar day number `day` (see `solarDay`) —
+ * Prayer times at `place` on its solar day number `day` (see `solarDay` in ./solar) —
  * local mean midnight to midnight, so no time zone is needed.
  */
 export function prayerTimes(place: GeoPoint, day: number, cfg: PrayerConfig): DayTimes {

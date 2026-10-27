@@ -254,3 +254,143 @@ function outline(ring: GeoPoint[], inside: (p: Vec) => boolean): GeoPoint[] {
 	}
 	return out;
 }
+
+// ---- a place: the day's moonrise, transit and moonset ---------------------------------------
+
+const HOUR_MS = 3_600_000;
+const DAY_MS = 86_400_000;
+/** Roughly how fast the moon's hour angle turns: a sidereal day's 360.99° less its own 13.18° a day, per hour. */
+const HOUR_ANGLE_RATE = (360.9856 - 13.18) / 24;
+
+export interface MoonEvent {
+	kind: MoonEventKind;
+	time: Date;
+}
+
+export interface MoonTimeline {
+	/** The requested day's events: null where the moon doesn't rise, transit above the horizon or set that day. */
+	today: Record<MoonEventKind, Date | null>;
+	/** Every event from the day before through the day after, in order. */
+	events: MoonEvent[];
+	/** With no rise and no set on the requested day: whether the moon stays up or stays down all day. */
+	allDay: 'up' | 'down' | null;
+}
+
+/**
+ * The moon seen from `place` at `t` (ms): its local hour angle, and how far
+ * its centre stands above h₀, the altitude at which it rises and sets — the
+ * same condition that puts a place on the map's lines.
+ */
+function moonFrom(place: GeoPoint, t: number): { hourAngle: number; height: number } {
+	const date = new Date(t);
+	const pos = moonPosition(date);
+	const hourAngle = wrapLon(place.lon + gmstDeg(date) - pos.rightAscension);
+	const sinAlt =
+		Math.sin(place.lat * RAD) * Math.sin(pos.declination * RAD) +
+		Math.cos(place.lat * RAD) * Math.cos(pos.declination * RAD) * Math.cos(hourAngle * RAD);
+	return { hourAngle, height: Math.asin(sinAlt) * DEG - riseAltitude(pos.parallax) };
+}
+
+/** When the moon culminates at `place` between `from` and `to` (ms): upper, at hour angle 0°, or lower, at 180°. */
+function culminations(place: GeoPoint, from: number, to: number): { t: number; upper: boolean }[] {
+	const out: { t: number; upper: boolean }[] = [];
+	let t = from;
+	let hourAngle = moonFrom(place, t).hourAngle;
+	let target = hourAngle < 0 ? 0 : 180;
+	for (;;) {
+		// Turn forward to the target, then iterate onto it.
+		t += ((((target - hourAngle) % 360) + 360) % 360 / HOUR_ANGLE_RATE) * HOUR_MS;
+		for (let i = 0; i < 6; i++) {
+			const step = wrapLon(target - moonFrom(place, t).hourAngle) / HOUR_ANGLE_RATE;
+			t += step * HOUR_MS;
+			if (Math.abs(step) < 1e-7) break;
+		}
+		if (t >= to) return out;
+		out.push({ t, upper: target === 0 });
+		hourAngle = target;
+		target = 180 - target;
+	}
+}
+
+/** Longest stretch between samples when looking for a rise or set. */
+const SAMPLE_MS = 2 * HOUR_MS;
+
+/**
+ * Every moonrise, transit and moonset at `place` between `from` and `to` (ms).
+ * Between one culmination and the next the moon mostly only climbs or only
+ * sinks, so the culminations bracket each rise and set; near the poles, where
+ * its changing declination moves it as much as Earth's turn, each stretch is
+ * also cut into pieces of at most SAMPLE_MS so a brief rise and set together
+ * aren't missed.
+ */
+function eventsBetween(place: GeoPoint, from: number, to: number): MoonEvent[] {
+	const marks = culminations(place, from, to);
+	const events: MoonEvent[] = marks
+		.filter((c) => c.upper && moonFrom(place, c.t).height > 0)
+		.map((c) => ({ kind: 'transit', time: new Date(c.t) }));
+
+	const edges: number[] = [];
+	const ends = [from, ...marks.map((c) => c.t), to];
+	for (let i = 1; i < ends.length; i++) {
+		const n = Math.ceil((ends[i] - ends[i - 1]) / SAMPLE_MS);
+		for (let k = 0; k < n; k++) edges.push(ends[i - 1] + ((ends[i] - ends[i - 1]) * k) / n);
+	}
+	edges.push(to);
+	let a = edges[0];
+	let upA = moonFrom(place, a).height > 0;
+	for (const b of edges.slice(1)) {
+		const upB = moonFrom(place, b).height > 0;
+		if (upA !== upB) {
+			let lo = a;
+			let hi = b;
+			while (hi - lo > 10) {
+				const mid = (lo + hi) / 2;
+				if (moonFrom(place, mid).height > 0 === upA) lo = mid;
+				else hi = mid;
+			}
+			events.push({ kind: upB ? 'moonrise' : 'moonset', time: new Date((lo + hi) / 2) });
+		}
+		a = b;
+		upA = upB;
+	}
+	return events.sort((x, y) => x.time.getTime() - y.time.getTime());
+}
+
+/**
+ * Moonrise, transit and moonset at `place` on its solar day number `day` (see
+ * `solarDay` in ./solar) — local mean midnight to midnight, as the prayer
+ * timetable counts days. Any may be missing: the moon rises about 50 minutes
+ * later each day, so about once a month a day has no moonrise (or no
+ * moonset), and at high latitudes it can stay up or down for days.
+ */
+export function moonTimeline(place: GeoPoint, day: number): MoonTimeline {
+	const start = day * DAY_MS - (place.lon / 15) * HOUR_MS;
+	const end = start + DAY_MS;
+	const events = eventsBetween(place, start - DAY_MS, end + DAY_MS);
+
+	const today: Record<MoonEventKind, Date | null> = { moonrise: null, transit: null, moonset: null };
+	for (const e of events) {
+		const t = e.time.getTime();
+		if (t >= start && t < end && !today[e.kind]) today[e.kind] = e.time;
+	}
+	const still = !today.moonrise && !today.moonset;
+	return {
+		today,
+		events,
+		allDay: still ? (moonFrom(place, start + DAY_MS / 2).height > 0 ? 'up' : 'down') : null
+	};
+}
+
+/** Whether the moon is up at `now`, and its next rise or set within the timeline. */
+export function upAndNext(timeline: MoonTimeline, now: Date): { up: boolean; next: MoonEvent | null } {
+	const t = now.getTime();
+	let last: MoonEvent | null = null;
+	let next: MoonEvent | null = null;
+	for (const e of timeline.events) {
+		if (e.kind === 'transit') continue;
+		if (e.time.getTime() <= t) last = e;
+		else if (!next) next = e;
+	}
+	const up = last ? last.kind === 'moonrise' : next ? next.kind === 'moonset' : timeline.allDay === 'up';
+	return { up, next };
+}

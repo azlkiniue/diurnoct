@@ -15,6 +15,11 @@
  *      must stop where the moon stays up or down, and the transit line where
  *      it's below the horizon as it crosses. The moonlit night must cover
  *      just the places where astronomy-engine has the moon up and the sun down.
+ *   4. The moon panel's timeline against astronomy-engine: each day's moonrise,
+ *      transit and moonset for 17 cities from the equator to the Arctic, a day
+ *      missing an event exactly when it finds none, and moon up or down all
+ *      day as it has it. And the map against the timeline: every place on a
+ *      line at an instant has that event in its timeline at that instant.
  *
  * Usage:  bun run verify-moon
  */
@@ -34,9 +39,9 @@ import {
 	SearchRiseSet,
 	SiderealTime
 } from 'astronomy-engine';
-import { wrapLon, type GeoPoint } from '../src/lib/astro/solar';
+import { solarDay, wrapLon, type GeoPoint } from '../src/lib/astro/solar';
 import { deltaT, moonPhase, moonPosition, sublunarPoint } from '../src/lib/astro/lunar';
-import { MOON_EVENT_KINDS, moonLines, type MoonEventKind } from '../src/lib/astro/moon';
+import { MOON_EVENT_KINDS, moonLines, moonTimeline, type MoonEventKind } from '../src/lib/astro/moon';
 
 const MIN = 60_000;
 const HOUR = 3600_000;
@@ -272,6 +277,102 @@ for (const t of INSTANTS) {
 		}
 	}
 	moonlitLit(lines.illumination - Illumination(Body.Moon, t).phase_fraction, at);
+}
+
+// ---- 4: the moon panel's timeline -----------------------------------------------------------
+
+const PLACES: [string, number, number][] = [
+	['Makkah', 21.4225, 39.8262],
+	['Jakarta', -6.2088, 106.8456],
+	['Seoul', 37.5665, 126.978],
+	['Tokyo', 35.6762, 139.6503],
+	['Cairo', 30.0444, 31.2357],
+	['Istanbul', 41.0082, 28.9784],
+	['London', 51.5074, -0.1278],
+	['New York', 40.7128, -74.006],
+	['Oslo', 59.9139, 10.7522],
+	['Reykjavík', 64.1466, -21.9426],
+	['Tromsø', 69.6492, 18.9553],
+	['Longyearbyen', 78.2232, 15.6267],
+	['Cape Town', -33.9249, 18.4241],
+	['Sydney', -33.8688, 151.2093],
+	['Ushuaia', -54.8019, -68.303],
+	['Honolulu', 21.3069, -157.8583],
+	['Auckland', -36.8485, 174.7633]
+];
+
+/** [year, month (0-based), day]: every other day through one lunar month, and a few through the year. */
+const DAYS: [number, number, number][] = [];
+for (let d = 1; d <= 31; d += 2) DAYS.push([2026, 9, d]);
+DAYS.push([2026, 0, 20], [2026, 3, 9], [2026, 5, 21], [2026, 11, 30]);
+
+/** astronomy-engine's events at `p` in the window [from, to), as the timeline would list them for a day. */
+function theirDay(p: GeoPoint, from: number, to: number): Record<MoonEventKind, Date | null> {
+	const observer = new Observer(p.lat, p.lon, 0);
+	const within = (d: Date | undefined) => (d && d.getTime() >= from && d.getTime() < to ? d : null);
+	const transit = within(SearchHourAngle(Body.Moon, observer, 0, new Date(from), +1).time.date);
+	return {
+		moonrise: within(SearchRiseSet(Body.Moon, observer, +1, new Date(from), 1)?.date),
+		// Counted only where the moon is up as it crosses.
+		transit: transit && theyHaveMoonUp(p, transit) ? transit : null,
+		moonset: within(SearchRiseSet(Body.Moon, observer, -1, new Date(from), 1)?.date)
+	};
+}
+
+const timesVsThem = check('Moonrise, transit and moonset times vs astronomy-engine (|lat| ≤ 60°)', 2, minutes);
+const timesVsThemPolar = check('… beyond 60°, reported', Infinity, minutes);
+const missingAgree = check('A day misses an event exactly when astronomy-engine finds none', 0, () => 'none');
+const allDayAgree = check('Moon up or down all day, as astronomy-engine has it', 0, () => 'none');
+
+for (const [name, lat, lon] of PLACES) {
+	const p = { lat, lon };
+	for (const [y, m, d] of DAYS) {
+		const day = solarDay(lon, new Date(Date.UTC(y, m, d, 12) - (lon / 15) * HOUR));
+		const from = day * 24 * HOUR - (lon / 15) * HOUR;
+		const to = from + 24 * HOUR;
+		const mine = moonTimeline(p, day);
+		const theirs = theirDay(p, from, to);
+		const label = `${name} ${y}-${m + 1}-${d}`;
+		for (const kind of MOON_EVENT_KINDS) {
+			const a = mine.today[kind];
+			const b = theirs[kind];
+			if (a && b) {
+				(Math.abs(lat) <= 60 ? timesVsThem : timesVsThemPolar)((a.getTime() - b.getTime()) / MIN, `${label} ${kind}`);
+			} else if (a || b) {
+				// Within a couple of minutes of midnight, the other may fairly put it on the next day.
+				const t = (a ?? b)!.getTime();
+				const edge = Math.min(t - from, to - t) / MIN;
+				missingAgree(edge < 2 ? 0 : NaN, `${label} ${kind}: ${a ? 'only ours' : 'only theirs'} at ${(a ?? b)!.toISOString()}`);
+			} else {
+				missingAgree(0, `${label} ${kind}`);
+			}
+		}
+		if (!theirs.moonrise && !theirs.moonset) {
+			const up = theyHaveMoonUp(p, new Date(from + 12 * HOUR));
+			allDayAgree(mine.allDay === (up ? 'up' : 'down') ? 0 : NaN, `${label}: ours ${mine.allDay}, theirs ${up ? 'up' : 'down'}`);
+		}
+	}
+}
+
+// Every place on a line at an instant has that event in its timeline then.
+const linesVsTimeline = check('Map lines vs timeline', 5 / 60, minutes);
+for (const t of INSTANTS) {
+	const lines = moonLines(t);
+	for (const kind of MOON_EVENT_KINDS) {
+		for (const seg of lines[kind]) {
+			const first = seg[0].lat;
+			const last = seg[seg.length - 1].lat;
+			seg.forEach((pt, i) => {
+				// Interior points only, and not where the moon just grazes the horizon.
+				if (i % 7 || i === 0 || i === seg.length - 1) return;
+				if (kind !== 'transit' && Math.min(pt.lat - first, last - pt.lat) <= 0.5) return;
+				const place = { lat: pt.lat, lon: wrapLon(pt.lon) };
+				const events = moonTimeline(place, solarDay(place.lon, t)).events.filter((e) => e.kind === kind);
+				const nearest = Math.min(...events.map((e) => Math.abs(e.time.getTime() - t.getTime()) / MIN));
+				linesVsTimeline(nearest, `${t.toISOString()} ${kind} at ${pt.lat.toFixed(2)}°, ${place.lon.toFixed(2)}°`);
+			});
+		}
+	}
 }
 
 // ---- report ---------------------------------------------------------------------------------

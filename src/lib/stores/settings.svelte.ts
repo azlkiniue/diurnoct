@@ -86,6 +86,8 @@ export interface MoonSettings {
 	/** Event names along the lines. */
 	labels: boolean;
 	legend: boolean;
+	/** The pinned place's moon panel. */
+	panel: boolean;
 }
 
 /** Where versions before the shared pinned place kept it. */
@@ -204,7 +206,8 @@ function defaults(): Settings {
 		moon: {
 			enabled: false,
 			labels: true,
-			legend: true
+			legend: true,
+			panel: true
 		}
 	};
 }

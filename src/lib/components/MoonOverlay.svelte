@@ -16,10 +16,12 @@
 		/** Latitude of the point under the moon, to keep the transit label clear of its marker. */
 		moonLat: number;
 		labels: boolean;
+		/** The pinned place, marked on the map. */
+		place: GeoPoint | null;
 		scale: number;
 	}
 
-	let { rect, width, height, lines, moonLat, labels, scale }: Props = $props();
+	let { rect, width, height, lines, moonLat, labels, place, scale }: Props = $props();
 
 	const uid = $props.id();
 	const r = (n: number) => n * scale;
@@ -61,6 +63,8 @@
 	const labelPts = $derived(
 		labels ? MOON_EVENT_KINDS.map(labelAt).filter((l) => l !== null) : []
 	);
+
+	const pin = $derived(place ? project(place.lat, place.lon, rect) : null);
 </script>
 
 <svg
@@ -105,6 +109,20 @@
 					{MOON_EVENT_NAMES[l.kind]}
 				</text>
 			{/each}
+		</g>
+	{/if}
+
+	{#if pin}
+		<g>
+			<circle cx={pin.x} cy={pin.y} r={r(9)} fill="var(--color-ink)" opacity="0.15" />
+			<circle
+				cx={pin.x}
+				cy={pin.y}
+				r={r(4)}
+				fill="var(--color-ink)"
+				stroke="var(--color-space)"
+				stroke-width={r(1.5)}
+			/>
 		</g>
 	{/if}
 </svg>
