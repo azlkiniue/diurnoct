@@ -32,11 +32,13 @@
 }
 
 /* Moon-view lines, picked the same way: >= 17 dE apart under protan, deutan
-   and tritan simulation. Components use var(--color-<event>). */
+   and tritan simulation, from each other and from the terminator line's
+   orange (--color-dusk), which the Moon view draws beside them. Components
+   use var(--color-<event>). */
 @theme static {
 	--color-moonrise: #38bdf8;
 	--color-transit: #f1f5f9;
-	--color-moonset: #fb7185;
+	--color-moonset: #e11d48;
 }
 
 /* ----------------------------------------------------------------------------

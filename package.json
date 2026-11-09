@@ -12,7 +12,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "fetch-textures": "bun run scripts/fetch-textures.ts",
     "verify-prayer-times": "bun run scripts/verify-prayer-times.ts",
-    "verify-moon": "bun run scripts/verify-moon.ts"
+    "verify-moon": "bun run scripts/verify-moon.ts",
+    "verify-palette": "bun run scripts/verify-palette.ts"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.8",

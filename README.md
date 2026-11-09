@@ -128,7 +128,10 @@ Served from the root, so no `BASE_PATH` is needed.
 - **Cities** shown as dots / clocks live in
   [`src/lib/astro/cities.ts`](src/lib/astro/cities.ts).
 - **Theme colors** are CSS variables in
-  [`src/app.css`](src/app.css) (`@theme` block).
+  [`src/app.css`](src/app.css) (`@theme` block). After changing them, run
+  `bun run verify-palette` to check that lines drawn together stay apart
+  under simulated color blindness: neighboring prayer lines, and the moon
+  lines against each other and the terminator line.
 - **Verbosity presets** are defined in
   [`src/lib/stores/settings.svelte.ts`](src/lib/stores/settings.svelte.ts).
 - **The terminator shader** is in
