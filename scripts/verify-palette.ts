@@ -20,7 +20,6 @@
  * Usage:  bun run verify-palette
  */
 
-import { readFileSync } from 'node:fs';
 import { MOON_EVENT_KINDS, MOON_EVENT_NAMES } from '../src/lib/astro/moon';
 import { PRAYER_KEYS, PRAYER_NAMES } from '../src/lib/astro/prayer';
 
@@ -41,7 +40,7 @@ const THEME = 'src/app.css';
 
 /** Every --color-* token declared in the theme's @theme blocks, by name, leaving out comments. */
 const tokens = new Map<string, string>();
-const css = readFileSync(new URL(`../${THEME}`, import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+const css = (await Bun.file(new URL(`../${THEME}`, import.meta.url)).text()).replace(/\/\*[\s\S]*?\*\//g, '');
 for (const [, block] of css.matchAll(/@theme\b[^{]*\{([^}]*)\}/g)) {
 	for (const [, name, value] of block.matchAll(/--color-([\w-]+)\s*:\s*([^;]+)/g)) tokens.set(name, value.trim());
 }
@@ -54,12 +53,14 @@ interface Line {
 	hex: string;
 }
 
+/** Two lines a viewer sees together, checked against each other. */
+type Pair = [Line, Line];
+
 function line(name: string, token: string): Line {
 	const value = tokens.get(token);
 	if (value === undefined) stop(`${name}: no --color-${token} in the theme (${THEME})`);
-	const digits = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value)?.[1];
-	if (!digits) stop(`${name}: --color-${token} is ${value}; give line colours as #rrggbb`);
-	return { name, token, hex: `#${(digits.length === 3 ? digits.replace(/./g, '$&$&') : digits).toLowerCase()}` };
+	if (!/^#[0-9a-f]{6}$/i.test(value)) stop(`${name}: --color-${token} is ${value}; give line colours as #rrggbb`);
+	return { name, token, hex: value.toLowerCase() };
 }
 
 // ---- the measure ----------------------------------------------------------------
@@ -126,7 +127,7 @@ const prayer = PRAYER_KEYS.map((key) => line(PRAYER_NAMES[key].name, key));
 const moon = MOON_EVENT_KINDS.map((kind) => line(MOON_EVENT_NAMES[kind], kind));
 const terminator = line('Terminator line', 'dusk');
 
-const RULES: { name: string; sims: Simulation[]; pairs: [Line, Line][] }[] = [
+const RULES: { name: string; sims: Simulation[]; pairs: Pair[] }[] = [
 	{
 		name: 'Prayer lines, each against the next as they sweep round the globe, Isha–Fajr across the night',
 		sims: ['protan', 'deutan'],
@@ -136,8 +137,8 @@ const RULES: { name: string; sims: Simulation[]; pairs: [Line, Line][] }[] = [
 		name: "Moon lines, every pair and each against the terminator line's orange",
 		sims: ['protan', 'deutan', 'tritan'],
 		pairs: [
-			...moon.flatMap((a, i) => moon.slice(i + 1).map((b): [Line, Line] => [a, b])),
-			...moon.map((a): [Line, Line] => [a, terminator])
+			...moon.flatMap((a, i) => moon.slice(i + 1).map((b): Pair => [a, b])),
+			...moon.map((a): Pair => [a, terminator])
 		]
 	}
 ];
@@ -145,7 +146,7 @@ const RULES: { name: string; sims: Simulation[]; pairs: [Line, Line][] }[] = [
 // ---- report ---------------------------------------------------------------------
 
 const listed = new Intl.ListFormat('en-GB');
-const label = ([a, b]: [Line, Line]) => `${a.name} ${a.hex} – ${b.name} ${b.hex}`;
+const label = ([a, b]: Pair) => `${a.name} ${a.hex} – ${b.name} ${b.hex}`;
 const width = Math.max(...RULES.flatMap((rule) => rule.pairs.map((pair) => label(pair).length)));
 
 let checked = 0;
