@@ -2,6 +2,7 @@
 	import '../app.css';
 
 	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 	import { base, resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -12,7 +13,7 @@
 	import { effectiveTime } from '$lib/time';
 	import { resolveSources } from '$lib/config';
 	import { computeMapRect, insideRect, unproject } from '$lib/map/projection';
-	import { setMapView } from '$lib/map/view';
+	import { setMapView, type LineLook } from '$lib/map/view';
 	import { HOME, VIEWS, viewAt, type View } from '$lib/views';
 
 	import MapCanvas from '$lib/components/MapCanvas.svelte';
@@ -53,6 +54,14 @@
 
 	const controlsVisible = $derived(settingsOpen || !st.ui.autoHide || active);
 
+	// TEMPORARY (#9): `?lines=glow` draws the event lines in the terminator
+	// line's look, to compare with today's. Read once, as the app starts, and
+	// only in the browser: the site is prerendered without a query. So it holds
+	// while moving between views, until a reload without it. It's neither saved
+	// nor a setting; remove it with whichever look loses.
+	const lineLook: LineLook =
+		browser && new URLSearchParams(location.search).get('lines') === 'glow' ? 'glow' : 'casing';
+
 	setMapView({
 		get width() {
 			return w;
@@ -75,6 +84,7 @@
 		get uiHidden() {
 			return uiHidden;
 		},
+		lineLook,
 		onMapClick(handler) {
 			mapClick = handler;
 			return () => {

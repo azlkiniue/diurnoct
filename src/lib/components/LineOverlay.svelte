@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { wrapLon, type GeoPoint } from '$lib/astro/solar';
 	import { linePath, project, type Rect } from '$lib/map/projection';
+	import { getMapView } from '$lib/map/view';
 
 	interface Props {
 		rect: Rect;
@@ -24,6 +25,20 @@
 
 	const uid = $props.id();
 	const r = (n: number) => n * scale;
+
+	/**
+	 * TEMPORARY (#9): with `?lines=glow`, each line is drawn in the terminator
+	 * line's look (see MapOverlay) in its own colour: a thin stroke over a soft
+	 * halo, with no casing. Widths are before HUD scaling. Opacity applies to
+	 * each path as a whole, so where a line's dash ends overlap they're no
+	 * darker. The halo keeps its stroke's dashes, and its round ends close the
+	 * gaps: dashed parts glow as touching pills, dotted parts as touching beads.
+	 */
+	const GLOW = [
+		{ width: 5, opacity: 0.15 },
+		{ width: 1.6, opacity: 0.9 }
+	];
+	const glow = getMapView().lineLook === 'glow';
 
 	// Longitudes are unwrapped, so paths run off the map's edges; the markup draws
 	// each one again a world to the left and right, clipped to the map.
@@ -55,18 +70,43 @@
 	</defs>
 
 	<g clip-path={`url(#map-${uid})`} stroke-linecap="round" stroke-linejoin="round">
-		{#each [-1, 0, 1] as shift (shift)}
-			<g transform={`translate(${shift * rect.width} 0)`}>
-				{@render under?.()}
-				<!-- A dark casing keeps every line legible over bright desert and ice. -->
-				{#each paths as p, i (i)}
-					<path d={p.d} stroke="rgb(3 6 14 / 0.6)" stroke-width={r(4.5)} stroke-dasharray={p.dash} />
+		{#if glow}
+			<!-- TEMPORARY (#9): the marks under the lines, then each stroke, in
+			     every copy of the world before the next, so no halo tints a stroke,
+			     even where lines from neighbouring copies meet, as the moonrise and
+			     moonset lines do at one end. -->
+			{#each [-1, 0, 1] as shift (shift)}
+				<g transform={`translate(${shift * rect.width} 0)`}>{@render under?.()}</g>
+			{/each}
+			{#each GLOW as s, k (k)}
+				{#each [-1, 0, 1] as shift (shift)}
+					<g transform={`translate(${shift * rect.width} 0)`}>
+						{#each paths as p, i (i)}
+							<path
+								d={p.d}
+								stroke={p.color}
+								stroke-width={r(s.width)}
+								stroke-dasharray={p.dash}
+								opacity={s.opacity}
+							/>
+						{/each}
+					</g>
 				{/each}
-				{#each paths as p, i (i)}
-					<path d={p.d} stroke={p.color} stroke-width={r(2)} stroke-dasharray={p.dash} />
-				{/each}
-			</g>
-		{/each}
+			{/each}
+		{:else}
+			{#each [-1, 0, 1] as shift (shift)}
+				<g transform={`translate(${shift * rect.width} 0)`}>
+					{@render under?.()}
+					<!-- A dark casing keeps every line legible over bright desert and ice. -->
+					{#each paths as p, i (i)}
+						<path d={p.d} stroke="rgb(3 6 14 / 0.6)" stroke-width={r(4.5)} stroke-dasharray={p.dash} />
+					{/each}
+					{#each paths as p, i (i)}
+						<path d={p.d} stroke={p.color} stroke-width={r(2)} stroke-dasharray={p.dash} />
+					{/each}
+				</g>
+			{/each}
+		{/if}
 	</g>
 
 	{#if placed.length}
