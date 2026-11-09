@@ -2,7 +2,7 @@
 	import '../app.css';
 
 	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/environment'; // TEMPORARY (#9): only for `?lines=glow`
 	import { base, resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
