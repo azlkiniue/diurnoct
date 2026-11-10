@@ -2,6 +2,7 @@
 	import { terminatorLatitude, type GeoPoint } from '$lib/astro/solar';
 	import { CITIES } from '$lib/astro/cities';
 	import { isDaylight } from '$lib/time';
+	import { LINE_HALO, LINE_STROKE } from '$lib/map/lines';
 	import { project, type Rect } from '$lib/map/projection';
 	import type { Layers } from '$lib/stores/settings.svelte';
 
@@ -92,11 +93,16 @@
 		<path
 			d={terminatorPath}
 			stroke="var(--color-dusk)"
-			stroke-width={r(1.6)}
-			opacity="0.9"
+			stroke-width={r(LINE_STROKE.width)}
+			opacity={LINE_STROKE.opacity}
 			stroke-linejoin="round"
 		/>
-		<path d={terminatorPath} stroke="var(--color-dusk)" stroke-width={r(5)} opacity="0.15" />
+		<path
+			d={terminatorPath}
+			stroke="var(--color-dusk)"
+			stroke-width={r(LINE_HALO.width)}
+			opacity={LINE_HALO.opacity}
+		/>
 	{/if}
 
 	{#if layers.cities}
